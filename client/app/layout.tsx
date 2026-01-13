@@ -4,6 +4,7 @@ import {
   ClerkProvider,
 } from '@clerk/nextjs';
 import { ThemeProvider } from "@/components/theme-provider";
+import StoreProvider from "./StoreProvider";
 
 export const metadata: Metadata = {
   title: "ShadowDeploy",
@@ -25,7 +26,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <StoreProvider>
+              {children}
+            </StoreProvider>
           </ThemeProvider>
         </body>
       </html>

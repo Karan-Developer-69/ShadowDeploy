@@ -13,17 +13,13 @@ import {
   MoreHorizontal,
   Search
 } from "lucide-react"
-
-// --- Mock Data for Table ---
-const recentRequests = [
-  { id: "req_8x92", path: "/api/v1/users", method: "GET", liveStatus: 200, shadowStatus: 200, latencyDiff: "+12ms", match: true },
-  { id: "req_7z11", path: "/api/v1/auth/login", method: "POST", liveStatus: 200, shadowStatus: 500, latencyDiff: "---", match: false },
-  { id: "req_3a44", path: "/api/v1/products", method: "GET", liveStatus: 200, shadowStatus: 200, latencyDiff: "-5ms", match: true },
-  { id: "req_9c55", path: "/api/v1/checkout", method: "POST", liveStatus: 201, shadowStatus: 201, latencyDiff: "+45ms", match: true },
-  { id: "req_1b22", path: "/api/v1/search?q=t", method: "GET", liveStatus: 200, shadowStatus: 404, latencyDiff: "---", match: false },
-]
+import { useAppSelector } from '@/lib/store/hooks'
 
 const Page = (): React.ReactNode => {
+  const { stats, trends } = useAppSelector((state) => state.traffic)
+  const { recentComparisons } = useAppSelector((state) => state.diff)
+  const { currentProject } = useAppSelector((state) => state.project)
+
   return (
     <div className="min-h-screen bg-[#050505] text-white p-6 md:p-8 overflow-y-auto">
 
@@ -31,7 +27,7 @@ const Page = (): React.ReactNode => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
-          <p className="text-zinc-500 text-sm">Monitoring <span className="text-white font-medium">shadow-v1.2</span> against production traffic.</p>
+          <p className="text-zinc-500 text-sm">Monitoring <span className="text-white font-medium">{currentProject.name} (shadow-v1.2)</span> against production traffic.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -52,32 +48,32 @@ const Page = (): React.ReactNode => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Total Requests"
-          value="1.2M"
-          change="+12.5%"
-          trend="up"
+          value={stats.totalRequests}
+          change={trends.requestsChange}
+          trend={trends.requestsChange.includes('+') ? 'up' : 'down'}
           icon={Activity}
         />
         <StatCard
           title="Shadow Errors"
-          value="42"
-          change="+2"
-          trend="down" // Down means bad here conceptually, visually handled
+          value={stats.shadowErrors.toString()}
+          change={trends.errorsChange}
+          trend={trends.errorsChange.includes('+') ? 'down' : 'up'} // More errors = bad (down trend visually) - logic depends on prop
           icon={AlertTriangle}
           isDestructive
         />
         <StatCard
           title="Avg Latency"
-          value="145ms"
-          change="-12ms"
-          trend="up" // Improved speed
+          value={stats.avgLatency}
+          change={trends.latencyChange}
+          trend={trends.latencyChange.includes('-') ? 'up' : 'down'} // Faster = up? Or just green.
           icon={Clock}
           subValue="Live: 157ms"
         />
         <StatCard
           title="Match Rate"
-          value="99.8%"
-          change="-0.1%"
-          trend="down"
+          value={stats.matchRate}
+          change={trends.matchRateChange}
+          trend={trends.matchRateChange.includes('-') ? 'down' : 'up'}
           icon={CheckCircle2}
         />
       </div>
@@ -178,7 +174,7 @@ const Page = (): React.ReactNode => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {recentRequests.map((req) => (
+              {recentComparisons.map((req) => (
                 <tr key={req.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-4 font-mono text-zinc-400">{req.id}</td>
                   <td className="px-6 py-4">

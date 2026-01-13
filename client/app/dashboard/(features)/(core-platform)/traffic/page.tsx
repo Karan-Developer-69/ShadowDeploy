@@ -13,22 +13,18 @@ import {
   AlertCircle
 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
-
-// --- Mock Data: Live Traffic Logs ---
-const initialLogs = [
-  { id: "req_99a", time: "10:42:05", method: "GET", path: "/api/v1/dashboard/stats", live: 200, shadow: 200, latencyLive: 45, latencyShadow: 48 },
-  { id: "req_99b", time: "10:42:04", method: "POST", path: "/api/auth/login", live: 200, shadow: 500, latencyLive: 120, latencyShadow: 15 },
-  { id: "req_99c", time: "10:42:02", method: "GET", path: "/api/v1/users/me", live: 200, shadow: 200, latencyLive: 30, latencyShadow: 32 },
-  { id: "req_99d", time: "10:42:01", method: "PUT", path: "/api/v1/settings", live: 204, shadow: 204, latencyLive: 90, latencyShadow: 88 },
-  { id: "req_99e", time: "10:41:58", method: "DELETE", path: "/api/v1/items/882", live: 403, shadow: 403, latencyLive: 25, latencyShadow: 24 },
-  { id: "req_99f", time: "10:41:55", method: "GET", path: "/api/v1/search?q=shadow", live: 200, shadow: 200, latencyLive: 150, latencyShadow: 210 }, // Slow shadow
-  { id: "req_99g", time: "10:41:50", method: "POST", path: "/api/webhooks/stripe", live: 200, shadow: 404, latencyLive: 80, latencyShadow: 5 },
-  { id: "req_99h", time: "10:41:48", method: "GET", path: "/health", live: 200, shadow: 200, latencyLive: 5, latencyShadow: 6 },
-]
+import { useAppSelector } from '@/lib/store/hooks'
 
 const Page = (): React.ReactNode => {
   const [isPaused, setIsPaused] = useState(false)
   const [filterText, setFilterText] = useState('')
+  const { liveLogs } = useAppSelector((state) => state.traffic)
+
+  const filteredLogs = liveLogs.filter(log =>
+    log.id.toLowerCase().includes(filterText.toLowerCase()) ||
+    log.path.toLowerCase().includes(filterText.toLowerCase()) ||
+    log.method.toLowerCase().includes(filterText.toLowerCase())
+  );
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -112,7 +108,7 @@ const Page = (): React.ReactNode => {
 
         {/* Table Body */}
         <div className="divide-y divide-border pb-20">
-          {initialLogs.map((log) => (
+          {filteredLogs.map((log) => (
             <div
               key={log.id}
               className={`

@@ -20,6 +20,7 @@ import { Button } from './ui/button'
 import Link from 'next/link'
 import Logo from './Logo'
 import { cn } from '@/lib/utils'
+import { useAppSelector } from '@/lib/store/hooks'
 
 // --- Types ---
 type NavItem = {
@@ -48,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onCloseMobile
 }) => {
     const [activePath, setActivePath] = useState('/dashboard')
+    const { currentProject, usage } = useAppSelector((state) => state.project)
 
     // --- Sidebar Data Structure based on Mind Map ---
     const navSections: Section[] = [
@@ -68,10 +70,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             ]
         },
         {
-            label: "Billing & Team",
+            label: "Billing",
             items: [
                 { title: "Subscription", icon: CreditCard, href: "/dashboard/payment/billing" },
-                { title: "Team Members", icon: Layers, href: "/dashboard/payment/team" },
             ]
         }
     ]
@@ -113,8 +114,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className={cn("px-4 pb-2 transition-all duration-300", isCollapsed ? "opacity-0 h-0 overflow-hidden" : "opacity-100")}>
                 <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5 group">
                     <div className="flex-1 overflow-hidden">
-                        <h4 className="text-sm font-medium text-white truncate">ShadowDeploy</h4>
-                        <p className="text-xs text-zinc-500 truncate">Pro Plan Team</p>
+                        <h4 className="text-sm font-medium text-white truncate">{currentProject.name}</h4>
+                        <p className="text-xs text-zinc-500 truncate">{currentProject.plan}</p>
                     </div>
                     <ChevronDown className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
                 </div>
@@ -122,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {isCollapsed && (
                 <div className="px-2 pb-2 flex justify-center">
                     <div className="w-10 h-10 rounded-lg bg-zinc-900 flex items-center justify-center text-xs font-bold text-zinc-500 hover:bg-zinc-800 cursor-pointer">
-                        SD
+                        {currentProject.name.substring(0, 2).toUpperCase()}
                     </div>
                 </div>
             )}
@@ -193,12 +194,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className="flex justify-between items-end mb-2">
                             <div>
                                 <p className="text-xs font-medium text-white">Monthly Usage</p>
-                                <p className="text-[10px] text-zinc-500">Resets in 12 days</p>
+                                <p className="text-[10px] text-zinc-500">Resets in {usage.resetDays} days</p>
                             </div>
-                            <p className="text-xs font-bold text-[#8E1616]">78%</p>
+                            <p className="text-xs font-bold text-[#8E1616]">{usage.percentage}%</p>
                         </div>
                         <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full w-[78%] bg-[#8E1616] rounded-full shadow-[0_0_10px_#8E1616]" />
+                            <div className="h-full bg-[#8E1616] rounded-full shadow-[0_0_10px_#8E1616]" style={{ width: `${usage.percentage}%` }} />
                         </div>
                     </div>
                 )}

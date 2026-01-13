@@ -16,6 +16,7 @@ import { GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { ModeToggle } from '@/components/mode-toggle';
+import Link from 'next/link';
 
 // --- Components ---
 
@@ -101,9 +102,9 @@ const Hero = () => (
         transition={{ duration: 0.5, delay: 0.3 }}
         className="flex flex-col md:flex-row items-center justify-center gap-4"
       >
-        <Button className="h-12 px-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-lg rounded-full w-full md:w-auto shadow-lg shadow-destructive/20">
+        <Link href="/dashboard" className="h-12 px-8 content-center bg-destructive hover:bg-destructive/90 text-destructive-foreground text-lg rounded-full w-full md:w-auto shadow-lg shadow-destructive/20">
           Start Shadow Testing
-        </Button>
+        </Link>
         <Button variant="outline" className="h-12 px-8 border-input bg-background/50 text-foreground hover:bg-accent hover:text-accent-foreground text-lg rounded-full w-full md:w-auto">
           View Architecture <ArrowRight className="ml-2 w-4 h-4" />
         </Button>

@@ -11,90 +11,10 @@ import {
     FileJson
 } from "lucide-react"
 
-// --- TYPES (Strict Type Safety) ---
-
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-
-interface RequestMeta {
-    id: string;
-    timestamp: string;
-    method: HttpMethod;
-    path: string;
-}
+import { useAppSelector } from '@/lib/store/hooks'
+// Types inferred from store state, explicit imports removed if unused
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-
-interface ResponseDetails {
-    status: number;
-    latency: number;
-    body: Record<string, JsonValue>;
-    headers: Record<string, string>;
-}
-
-interface ComparisonData {
-    meta: RequestMeta;
-    live: ResponseDetails;
-    shadow: ResponseDetails;
-    diffSummary: {
-        statusMatch: boolean;
-        bodyMatch: boolean;
-        latencyDiff: number; // in ms
-        breakingScore: number; // 0-100 (0 = safe, 100 = broken)
-    }
-}
-
-// --- MOCK DATA ---
-
-const mockComparisons: ComparisonData[] = [
-    {
-        meta: { id: "req_88a", timestamp: "10:45:01", method: "GET", path: "/api/v1/users/profile" },
-        live: {
-            status: 200,
-            latency: 45,
-            body: { id: 101, name: "Alice", role: "admin", features: ["beta", "pro"] },
-            headers: { "content-type": "application/json" }
-        },
-        shadow: {
-            status: 200,
-            latency: 52,
-            body: { id: 101, name: "Alice", role: "user", features: ["beta"] }, // Role changed, feature missing
-            headers: { "content-type": "application/json" }
-        },
-        diffSummary: { statusMatch: true, bodyMatch: false, latencyDiff: +7, breakingScore: 45 }
-    },
-    {
-        meta: { id: "req_88b", timestamp: "10:44:55", method: "POST", path: "/api/checkout" },
-        live: {
-            status: 201,
-            latency: 120,
-            body: { success: true, orderId: "ORD-999" },
-            headers: {}
-        },
-        shadow: {
-            status: 500,
-            latency: 15,
-            body: { error: "Internal Server Error", code: "DB_FAIL" },
-            headers: {}
-        },
-        diffSummary: { statusMatch: false, bodyMatch: false, latencyDiff: -105, breakingScore: 100 }
-    },
-    {
-        meta: { id: "req_88c", timestamp: "10:44:20", method: "GET", path: "/api/v1/settings" },
-        live: {
-            status: 200,
-            latency: 30,
-            body: { theme: "dark", notifications: true },
-            headers: {}
-        },
-        shadow: {
-            status: 200,
-            latency: 31,
-            body: { theme: "dark", notifications: true },
-            headers: {}
-        },
-        diffSummary: { statusMatch: true, bodyMatch: true, latencyDiff: +1, breakingScore: 0 }
-    }
-];
 
 // --- COMPONENT: Json Diff Viewer ---
 
@@ -177,13 +97,23 @@ const JsonDiffRow = ({
 // --- MAIN PAGE COMPONENT ---
 
 const Page = (): React.ReactNode => {
-    const [selectedId, setSelectedId] = useState<string>(mockComparisons[0].meta.id);
+    const { detailedComparisons } = useAppSelector((state) => state.diff);
+    const [selectedId, setSelectedId] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'body' | 'headers'>('body');
+
+    // Initialize selectedId when data is available
+    React.useEffect(() => {
+        if (detailedComparisons.length > 0 && !selectedId) {
+            setSelectedId(detailedComparisons[0].meta.id);
+        }
+    }, [detailedComparisons, selectedId]);
 
     // Find currently selected data
     const currentData = useMemo(() =>
-        mockComparisons.find(c => c.meta.id === selectedId) || mockComparisons[0],
-        [selectedId]);
+        detailedComparisons.find(c => c.meta.id === selectedId) || detailedComparisons[0],
+        [selectedId, detailedComparisons]);
+
+    if (!currentData) return <div className="p-8 text-center text-zinc-500">No diff data available</div>;
 
     return (
         <div className="h-screen flex flex-col bg-[#050505] text-white overflow-hidden">
@@ -218,7 +148,7 @@ const Page = (): React.ReactNode => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
-                        {mockComparisons.map((item) => (
+                        {detailedComparisons.map((item) => (
                             <div
                                 key={item.meta.id}
                                 onClick={() => setSelectedId(item.meta.id)}

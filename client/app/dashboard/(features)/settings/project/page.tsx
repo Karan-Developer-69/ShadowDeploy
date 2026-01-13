@@ -15,13 +15,27 @@ import {
     RefreshCw
 } from "lucide-react"
 
+import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
+import { setProject } from '@/lib/store/features/project/projectSlice'
+
 const Page = (): React.ReactNode => {
     const [copied, setCopied] = useState(false)
+    const dispatch = useAppDispatch()
 
-    // Form States
-    const [projectName, setProjectName] = useState("ShadowDeploy Core API")
-    const [liveUrl, setLiveUrl] = useState("https://api.myapp.com")
-    const [shadowUrl, setShadowUrl] = useState("https://shadow-api.myapp.com")
+    // Redux State
+    const { currentProject } = useAppSelector((state) => state.project)
+
+    // Local state for form inputs (initialized from Redux)
+    const [localProjectName, setLocalProjectName] = useState(currentProject.name)
+    const [localLiveUrl, setLocalLiveUrl] = useState(currentProject.liveUrl)
+    const [localShadowUrl, setLocalShadowUrl] = useState(currentProject.shadowUrl)
+
+    // Sync local state when redux state changes (e.g. initial load)
+    React.useEffect(() => {
+        setLocalProjectName(currentProject.name)
+        setLocalLiveUrl(currentProject.liveUrl)
+        setLocalShadowUrl(currentProject.shadowUrl)
+    }, [currentProject])
 
     // Toggles
     const [settings, setSettings] = useState({
@@ -41,6 +55,17 @@ const Page = (): React.ReactNode => {
         setSettings(prev => ({ ...prev, [key]: !prev[key] }))
     }
 
+    const handleSaveChanges = () => {
+        dispatch(setProject({
+            ...currentProject,
+            name: localProjectName,
+            liveUrl: localLiveUrl,
+            shadowUrl: localShadowUrl
+        }))
+        // Ideally add toast notification here
+        alert("Changes saved to global store!")
+    }
+
     return (
         <div className="min-h-screen bg-[#050505] text-white p-6 md:p-8 font-sans pb-24">
 
@@ -49,10 +74,12 @@ const Page = (): React.ReactNode => {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight mb-2">Project Settings</h1>
                     <p className="text-zinc-400 text-sm">
-                        Manage configuration for <span className="text-white font-medium">{projectName}</span>.
+                        Manage configuration for <span className="text-white font-medium">{localProjectName}</span>.
                     </p>
                 </div>
-                <button className="flex items-center gap-2 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-white/5">
+                <button
+                    onClick={handleSaveChanges}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-white/5">
                     <Save className="w-4 h-4" /> Save Changes
                 </button>
             </div>
@@ -73,8 +100,8 @@ const Page = (): React.ReactNode => {
                                 <label className="text-sm font-medium text-zinc-300">Project Name</label>
                                 <input
                                     type="text"
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
+                                    value={localProjectName}
+                                    onChange={(e) => setLocalProjectName(e.target.value)}
                                     className="w-full bg-black/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8E1616] transition-colors"
                                 />
                             </div>
@@ -125,8 +152,8 @@ const Page = (): React.ReactNode => {
                                     <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-zinc-800 bg-zinc-900 text-zinc-500 text-sm">https://</span>
                                     <input
                                         type="text"
-                                        value={liveUrl.replace('https://', '')}
-                                        onChange={(e) => setLiveUrl(e.target.value)}
+                                        value={localLiveUrl.replace('https://', '')}
+                                        onChange={(e) => setLocalLiveUrl(e.target.value.startsWith('https://') ? e.target.value : `https://${e.target.value}`)}
                                         className="flex-1 bg-black/50 border border-zinc-800 rounded-r-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8E1616] font-mono"
                                     />
                                 </div>
@@ -141,8 +168,8 @@ const Page = (): React.ReactNode => {
                                     <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-zinc-800 bg-zinc-900 text-zinc-500 text-sm">https://</span>
                                     <input
                                         type="text"
-                                        value={shadowUrl.replace('https://', '')}
-                                        onChange={(e) => setShadowUrl(e.target.value)}
+                                        value={localShadowUrl.replace('https://', '')}
+                                        onChange={(e) => setLocalShadowUrl(e.target.value.startsWith('https://') ? e.target.value : `https://${e.target.value}`)}
                                         className="flex-1 bg-black/50 border border-zinc-800 rounded-r-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8E1616] font-mono"
                                     />
                                 </div>
