@@ -19,6 +19,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
+        <link rel="icon" href="/logo.jpg" />
         <body>
           <ThemeProvider
             attribute="class"
