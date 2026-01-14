@@ -1,20 +1,28 @@
 const refiner = ({ liveData, shadowData }) => {
-    const refinedData = {};
-    if (liveData.statusCode && shadowData.statusCode) {
-        refinedData.statusCode = {
-            live: liveData.statusCode,
-            shadow: shadowData.statusCode,
-            result: liveData.statusCode === shadowData.statusCode ? "Pass" : "Fail",
+    // Basic match logic
+    const statusMatch = liveData.status === shadowData.status;
+    const bodyMatch = JSON.stringify(liveData.bodyData) === JSON.stringify(shadowData.bodyData);
+
+    const latencyDiffVal = liveData.responseTime - shadowData.responseTime;
+    const latencyDiff = latencyDiffVal > 0 ? `+${latencyDiffVal}ms` : `${latencyDiffVal}ms`;
+
+    return {
+        id: `req_${Date.now().toString(36)}`,
+        path: liveData.endpoint,
+        method: liveData.method,
+        liveStatus: liveData.status,
+        shadowStatus: shadowData.status,
+        latencyDiff: latencyDiff,
+        match: statusMatch && bodyMatch,
+        timestamp: liveData.timestamp,
+        // Detailed data for potential drill-down
+        details: {
+            liveBody: liveData.bodyData,
+            shadowBody: shadowData.bodyData,
+            liveResponseTime: liveData.responseTime,
+            shadowResponseTime: shadowData.responseTime
         }
-    }
-    if (liveData.responseTime && shadowData.responseTime) {
-        refinedData.responseTime = {
-            live: liveData.responseTime,
-            shadow: shadowData.responseTime,
-            result: liveData.responseTime === shadowData.responseTime ? "Pass" : "Fail",
-        }
-    }
-    return refinedData;
+    };
 }
 
 module.exports = refiner;

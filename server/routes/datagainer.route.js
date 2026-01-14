@@ -4,9 +4,10 @@ const refiner = require("../controller/refiner.controler");
 
 router.post("/", (req, res) => {
     const data = req.body;
-    console.log(data)
+    // console.log(data)
     const refinedData = refiner(data);
-    console.log(refinedData);
+
+    console.log("Refined & Stored:", refinedData.id);
     res.json(refinedData);
 });
 

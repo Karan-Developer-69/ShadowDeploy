@@ -1,0 +1,169 @@
+DiffState = {
+    recentComparisons: [
+        { id: "req_8x92", path: "/api/v1/users", method: "GET", liveStatus: 200, shadowStatus: 200, latencyDiff: "+12ms", match: true },
+        { id: "req_7z11", path: "/api/v1/auth/login", method: "POST", liveStatus: 200, shadowStatus: 500, latencyDiff: "---", match: false },
+        { id: "req_3a44", path: "/api/v1/products", method: "GET", liveStatus: 200, shadowStatus: 200, latencyDiff: "-5ms", match: true },
+        { id: "req_9c55", path: "/api/v1/checkout", method: "POST", liveStatus: 201, shadowStatus: 201, latencyDiff: "+45ms", match: true },
+        { id: "req_1b22", path: "/api/v1/search?q=t", method: "GET", liveStatus: 200, shadowStatus: 404, latencyDiff: "---", match: false },
+    ],
+    detailedComparisons: [
+        {
+            meta: { id: "req_88a", timestamp: "10:45:01", method: "GET", path: "/api/v1/users/profile" },
+            live: {
+                status: 200,
+                latency: 45,
+                body: { id: 101, name: "Alice", role: "admin", features: ["beta", "pro"] },
+                headers: { "content-type": "application/json" }
+            },
+            shadow: {
+                status: 200,
+                latency: 52,
+                body: { id: 101, name: "Alice", role: "user", features: ["beta"] },
+                headers: { "content-type": "application/json" }
+            },
+            diffSummary: { statusMatch: true, bodyMatch: false, latencyDiff: +7, breakingScore: 45 }
+        },
+        {
+            meta: { id: "req_88b", timestamp: "10:44:55", method: "POST", path: "/api/checkout" },
+            live: {
+                status: 201,
+                latency: 120,
+                body: { success: true, orderId: "ORD-999" },
+                headers: {}
+            },
+            shadow: {
+                status: 500,
+                latency: 15,
+                body: { error: "Internal Server Error", code: "DB_FAIL" },
+                headers: {}
+            },
+            diffSummary: { statusMatch: false, bodyMatch: false, latencyDiff: -105, breakingScore: 100 }
+        },
+        {
+            meta: { id: "req_88c", timestamp: "10:44:20", method: "GET", path: "/api/v1/settings" },
+            live: {
+                status: 200,
+                latency: 30,
+                body: { theme: "dark", notifications: true },
+                headers: {}
+            },
+            shadow: {
+                status: 200,
+                latency: 31,
+                body: { theme: "dark", notifications: true },
+                headers: {}
+            },
+            diffSummary: { statusMatch: true, bodyMatch: true, latencyDiff: +1, breakingScore: 0 }
+        }
+    ],
+    loading: false,
+    error: null,
+}
+
+EndpointState = {
+    endpoints: [
+        {
+            id: "ep_1",
+            method: "GET",
+            path: "/api/v1/users",
+            traffic24h: 450200,
+            trend: 12,
+            avgLatencyLive: 45,
+            avgLatencyShadow: 48,
+            errorRateLive: 0.01,
+            errorRateShadow: 0.01,
+            status: "healthy",
+            lastActive: "Just now"
+        },
+        // ... (Keep other initial data as fallback)
+        {
+            id: "ep_2",
+            method: "POST",
+            path: "/api/v1/checkout/process",
+            traffic24h: 12500,
+            trend: 5,
+            avgLatencyLive: 120,
+            avgLatencyShadow: 350,
+            errorRateLive: 0.5,
+            errorRateShadow: 0.5,
+            status: "degraded",
+            lastActive: "2 min ago"
+        },
+        {
+            id: "ep_3",
+            method: "GET",
+            path: "/api/v1/products/search",
+            traffic24h: 89000,
+            trend: -2,
+            avgLatencyLive: 80,
+            avgLatencyShadow: 82,
+            errorRateLive: 0.1,
+            errorRateShadow: 15.5,
+            status: "critical",
+            lastActive: "Just now"
+        },
+        {
+            id: "ep_4",
+            method: "PUT",
+            path: "/api/v1/settings/profile",
+            traffic24h: 3400,
+            trend: 0,
+            avgLatencyLive: 60,
+            avgLatencyShadow: 58,
+            errorRateLive: 0,
+            errorRateShadow: 0,
+            status: "healthy",
+            lastActive: "15 min ago"
+        },
+        {
+            id: "ep_5",
+            method: "DELETE",
+            path: "/api/v1/cart/items",
+            traffic24h: 850,
+            trend: 1,
+            avgLatencyLive: 35,
+            avgLatencyShadow: 35,
+            errorRateLive: 0.2,
+            errorRateShadow: 0.2,
+            status: "healthy",
+            lastActive: "1 hr ago"
+        }
+    ]
+
+ProjectState = {
+    currentProject: {
+        name: '',
+        plan: '',
+        tier: 'Startup',
+        liveUrl: '',
+        shadowUrl: '',
+    },
+}
+
+TrafficState = {
+    stats: {
+        totalRequests: '1.2M',
+        shadowErrors: 42,
+        avgLatency: '145ms',
+        matchRate: '99.8%',
+    },
+    trends: {
+        requestsChange: '+12.5%',
+        errorsChange: '+2',
+        latencyChange: '-12ms',
+        matchRateChange: '-0.1%',
+    },
+    liveLogs: [
+        { id: "req_99a", time: "10:42:05", method: "GET", path: "/api/v1/dashboard/stats", live: 200, shadow: 200, latencyLive: 45, latencyShadow: 48 },
+        { id: "req_99b", time: "10:42:04", method: "POST", path: "/api/auth/login", live: 200, shadow: 500, latencyLive: 120, latencyShadow: 15 },
+        { id: "req_99c", time: "10:42:02", method: "GET", path: "/api/v1/users/me", live: 200, shadow: 200, latencyLive: 30, latencyShadow: 32 },
+        { id: "req_99d", time: "10:42:01", method: "PUT", path: "/api/v1/settings", live: 204, shadow: 204, latencyLive: 90, latencyShadow: 88 },
+        { id: "req_99e", time: "10:41:58", method: "DELETE", path: "/api/v1/items/882", live: 403, shadow: 403, latencyLive: 25, latencyShadow: 24 },
+        { id: "req_99f", time: "10:41:55", method: "GET", path: "/api/v1/search?q=shadow", live: 200, shadow: 200, latencyLive: 150, latencyShadow: 210 },
+        { id: "req_99g", time: "10:41:50", method: "POST", path: "/api/webhooks/stripe", live: 200, shadow: 404, latencyLive: 80, latencyShadow: 5 },
+        { id: "req_99h", time: "10:41:48", method: "GET", path: "/health", live: 200, shadow: 200, latencyLive: 5, latencyShadow: 6 },
+    ],
+    loading: false,
+    error: null,
+}
+
