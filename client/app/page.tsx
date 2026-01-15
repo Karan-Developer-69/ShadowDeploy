@@ -9,7 +9,9 @@ import {
   Database,
   Server,
   CheckCircle2,
-  Terminal
+  Terminal,
+  Copy,
+  Check
 } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import { GitCompare } from 'lucide-react';
@@ -17,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { ModeToggle } from '@/components/mode-toggle';
 import Link from 'next/link';
+import { useState } from 'react';
 
 // --- Components ---
 
@@ -28,6 +31,7 @@ const Navbar = () => (
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
         <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+        <a href="#quickstart" className="hover:text-foreground transition-colors">Quick Start</a>
         <a href="#engine" className="hover:text-foreground transition-colors">How it Works</a>
         <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
       </div>
@@ -147,6 +151,146 @@ const CoreFeatures = () => (
   </section>
 )
 
+const QuickStart = () => {
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  const handleCopy = async (text: string, field: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
+  }
+
+  return (
+    <section id="quickstart" className="py-24 bg-background">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="mb-16 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">Quick Start</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Get started with ShadowDeploy in under 2 minutes. Install our npm package and start mirroring traffic.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Step 1: Install */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive text-destructive-foreground text-sm font-bold">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Install the Package</h3>
+            </div>
+            <div className="relative">
+              <pre className="bg-zinc-950 dark:bg-black p-6 rounded-xl overflow-x-auto border border-border">
+                <code className="text-sm font-mono text-zinc-300">
+                  <span className="text-purple-400">npm</span> install shadow-deploy-client
+                </code>
+              </pre>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 hover:bg-zinc-800"
+                onClick={() => handleCopy('npm install shadow-deploy-client', 'install')}
+              >
+                {copiedField === 'install' ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4 text-zinc-400" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Step 2: Setup */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive text-destructive-foreground text-sm font-bold">
+                2
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Add to Express App</h3>
+            </div>
+            <div className="relative">
+              <pre className="bg-zinc-950 dark:bg-black p-6 rounded-xl overflow-x-auto border border-border">
+                <code className="text-sm font-mono text-zinc-300">
+                  <span className="text-purple-400">const</span> <span className="text-yellow-300">Shadow</span> = <span className="text-blue-400">require</span>(<span className="text-green-400">&apos;shadow-deploy-client&apos;</span>);{'\n\n'}
+                  <span className="text-purple-400">const</span> shadow = <span className="text-purple-400">new</span> <span className="text-yellow-300">Shadow</span>({`{`}{'\n'}
+                  {'  '}<span className="text-blue-300">apiKey</span>: <span className="text-green-400">&apos;your-api-key&apos;</span>,{'\n'}
+                  {'  '}<span className="text-blue-300">projectId</span>: <span className="text-green-400">&apos;your-project-id&apos;</span>{'\n'}
+                  {`}`});{'\n\n'}
+                  <span className="text-gray-500">{`// Add middleware`}</span>{'\n'}
+                  app.<span className="text-blue-400">use</span>(shadow.proxyHandler);
+                </code>
+              </pre>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 hover:bg-zinc-800"
+                onClick={() => handleCopy(`const Shadow = require('shadow-deploy-client');\n\nconst shadow = new Shadow({\n  apiKey: 'your-api-key',\n  projectId: 'your-project-id'\n});\n\n// Add middleware\napp.use(shadow.proxyHandler);`, 'setup')}
+              >
+                {copiedField === 'setup' ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4 text-zinc-400" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Full Example */}
+        <div className="mt-12">
+          <div className="flex items-center gap-3 mb-4">
+            <Terminal className="w-6 h-6 text-destructive" />
+            <h3 className="text-xl font-bold text-foreground">Complete Example</h3>
+          </div>
+          <div className="relative">
+            <pre className="bg-zinc-950 dark:bg-black p-6 rounded-xl overflow-x-auto border border-border">
+              <code className="text-sm font-mono text-zinc-300">
+                <span className="text-purple-400">const</span> express = <span className="text-blue-400">require</span>(<span className="text-green-400">&apos;express&apos;</span>);{'\n'}
+                <span className="text-purple-400">const</span> <span className="text-yellow-300">Shadow</span> = <span className="text-blue-400">require</span>(<span className="text-green-400">&apos;shadow-deploy-client&apos;</span>);{'\n\n'}
+                <span className="text-purple-400">const</span> app = <span className="text-blue-400">express</span>();{'\n'}
+                <span className="text-purple-400">const</span> shadow = <span className="text-purple-400">new</span> <span className="text-yellow-300">Shadow</span>({`{`}{'\n'}
+                {'  '}<span className="text-blue-300">apiKey</span>: process.env.<span className="text-blue-300">SHADOW_API_KEY</span>,{'\n'}
+                {'  '}<span className="text-blue-300">projectId</span>: process.env.<span className="text-blue-300">SHADOW_PROJECT_ID</span>{'\n'}
+                {`}`});{'\n\n'}
+                app.<span className="text-blue-400">use</span>(express.<span className="text-blue-400">json</span>());{'\n'}
+                app.<span className="text-blue-400">use</span>(shadow.proxyHandler); <span className="text-gray-500">{`// Add before routes`}</span>{'\n\n'}
+                app.<span className="text-blue-400">get</span>(<span className="text-green-400">&apos;/api/users&apos;</span>, (req, res) {`=>`} {`{`}{'\n'}
+                {'  '}res.<span className="text-blue-400">json</span>({`{ users: [] }`});{'\n'}
+                {`}`});{'\n\n'}
+                app.<span className="text-blue-400">listen</span>(<span className="text-orange-400">3000</span>);
+              </code>
+            </pre>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 h-8 w-8 hover:bg-zinc-800"
+              onClick={() => handleCopy(`const express = require('express');\nconst Shadow = require('shadow-deploy-client');\n\nconst app = express();\nconst shadow = new Shadow({\n  apiKey: process.env.SHADOW_API_KEY,\n  projectId: process.env.SHADOW_PROJECT_ID\n});\n\napp.use(express.json());\napp.use(shadow.proxyHandler); // Add before routes\n\napp.get('/api/users', (req, res) => {\n  res.json({ users: [] });\n});\n\napp.listen(3000);`, 'complete')}
+            >
+              {copiedField === 'complete' ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4 text-zinc-400" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="mt-12 bg-destructive/10 border border-destructive/20 rounded-xl p-8 text-center">
+          <p className="text-lg text-foreground mb-4">
+            🚀 Get your API credentials from the dashboard to start testing
+          </p>
+          <Link href="/dashboard">
+            <Button className="bg-destructive hover:bg-destructive/90 text-white">
+              Go to Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 const EngineVisualization = () => (
   <section id="engine" className="py-24 border-y border-border bg-background relative overflow-hidden">
     <div className="max-w-7xl mx-auto px-6 relative z-10">
@@ -158,25 +302,6 @@ const EngineVisualization = () => (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         {/* Left: Code/Tech View */}
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl border border-border bg-zinc-950 dark:bg-black shadow-2xl">
-            <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-4">
-              <Terminal className="text-destructive w-5 h-5" />
-              <span className="text-sm font-mono text-zinc-400">middleware.ts (Proxy)</span>
-            </div>
-            <pre className="font-mono text-sm text-zinc-300 overflow-x-auto">
-              <span className="text-purple-400">async function</span> <span className="text-yellow-300">handleRequest</span>(req) {"{"}{"\n"}
-              {"  "} <span className="text-gray-500">&quot;// 1. Forward to LIVE&quot;</span>{"\n"}
-              {"  "} <span className="text-purple-400">const</span> liveRes = <span className="text-purple-400">await</span> fetch(LIVE_URL);{"\n"}{"\n"}
-              {"  "} <span className="text-gray-500">&quot;// 2. Async Shadow (Fire & Forget)&quot;</span>{"\n"}
-              {"  "} ShadowQueue.<span className="text-blue-400">enqueue</span>({"{"}{"\n"}
-              {"    "} headers: req.headers,{"\n"}
-              {"    "} body: req.body{"\n"}
-              {"  "} {"}"});{"\n"}{"\n"}
-              {"  "} <span className="text-purple-400">return</span> liveRes;{"\n"}
-              {"}"}
-            </pre>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-muted/50 border border-border">
               <div className="text-destructive font-bold text-lg mb-1">Safe</div>
@@ -374,6 +499,7 @@ const Page = () => {
       <Navbar />
       <Hero />
       <CoreFeatures />
+      <QuickStart />
       <EngineVisualization />
       <DashboardPreview />
       <Pricing />
