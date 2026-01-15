@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
 import { updateProject } from '@/lib/store/features/project/projectSlice'
@@ -15,34 +15,30 @@ export default function ProjectSettingsPage() {
     const { currentProject, loading } = useAppSelector((state) => state.project)
     const projectId = params.id as string
 
-    const [formData, setFormData] = useState({
-        name: '',
-        liveUrl: '',
-        shadowUrl: '',
-    })
+
+    // Memoize initial form data based on current project
+    // This resets when projectId changes (navigating to different project)
+    const initialFormData = React.useMemo(() => ({
+        name: currentProject.projectId === projectId ? (currentProject.name || '') : '',
+        liveUrl: currentProject.projectId === projectId ? (currentProject.liveUrl || '') : '',
+        shadowUrl: currentProject.projectId === projectId ? (currentProject.shadowUrl || '') : '',
+    }), [projectId, currentProject.projectId, currentProject.name, currentProject.liveUrl, currentProject.shadowUrl])
+
+    // Use the memoized value to reset form when project changes
+    const [formData, setFormData] = useState(initialFormData)
     const [copiedField, setCopiedField] = useState<string | null>(null)
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
-    const [hasChanges, setHasChanges] = useState(false)
 
-    // Load project data
-    useEffect(() => {
-        if (currentProject.projectId === projectId) {
-            setFormData({
-                name: currentProject.name || '',
-                liveUrl: currentProject.liveUrl || '',
-                shadowUrl: currentProject.shadowUrl || '',
-            })
-        }
-    }, [currentProject, projectId])
+    // Reset form data when navigating to a different project
+    React.useEffect(() => {
+        setFormData(initialFormData)
+    }, [initialFormData])
 
-    // Track changes
-    useEffect(() => {
-        const changed =
-            formData.name !== (currentProject.name || '') ||
-            formData.liveUrl !== (currentProject.liveUrl || '') ||
-            formData.shadowUrl !== (currentProject.shadowUrl || '')
-        setHasChanges(changed)
-    }, [formData, currentProject])
+    // Derive hasChanges from current state (no need for state + effect)
+    const hasChanges =
+        formData.name !== (currentProject.name || '') ||
+        formData.liveUrl !== (currentProject.liveUrl || '') ||
+        formData.shadowUrl !== (currentProject.shadowUrl || '')
 
     const handleCopy = async (text: string, field: string) => {
         await navigator.clipboard.writeText(text)
@@ -65,7 +61,6 @@ export default function ProjectSettingsPage() {
             })).unwrap()
 
             setSaveStatus('success')
-            setHasChanges(false)
             setTimeout(() => setSaveStatus('idle'), 3000)
         } catch (error) {
             console.error('Failed to update project:', error)
@@ -80,7 +75,6 @@ export default function ProjectSettingsPage() {
             liveUrl: currentProject.liveUrl || '',
             shadowUrl: currentProject.shadowUrl || '',
         })
-        setHasChanges(false)
         setSaveStatus('idle')
     }
 

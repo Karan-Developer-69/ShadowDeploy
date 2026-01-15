@@ -9,6 +9,8 @@ const datagainerRoute = require("./routes/datagainer.route");
 const clientRoute = require("./routes/client.route");
 const connectDB = require("./db/mongo");
 
+const PORT = process.env.PORT || 6900
+
 // CORS configuration
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
@@ -55,8 +57,8 @@ app.use((req, res) => {
 // Connect to MongoDB
 connectDB();
 
-app.listen(6900, () => {
-    console.log("Server is running on port 6900")
+app.listen(PORT, () => {
+    console.log("Server is running on port ", PORT)
     console.log("Environment:", process.env.NODE_ENV || 'development')
     if (process.env.CLERK_SECRET_KEY) {
         console.log("✅ Clerk authentication enabled")
