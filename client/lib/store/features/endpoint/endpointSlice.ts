@@ -25,74 +25,7 @@ interface EndpointState {
 }
 
 const initialState: EndpointState = {
-    endpoints: [
-        {
-            id: "ep_1",
-            method: "GET",
-            path: "/api/v1/users",
-            traffic24h: 450200,
-            trend: 12,
-            avgLatencyLive: 45,
-            avgLatencyShadow: 48,
-            errorRateLive: 0.01,
-            errorRateShadow: 0.01,
-            status: "healthy",
-            lastActive: "Just now"
-        },
-        // ... (Keep other initial data as fallback)
-        {
-            id: "ep_2",
-            method: "POST",
-            path: "/api/v1/checkout/process",
-            traffic24h: 12500,
-            trend: 5,
-            avgLatencyLive: 120,
-            avgLatencyShadow: 350,
-            errorRateLive: 0.5,
-            errorRateShadow: 0.5,
-            status: "degraded",
-            lastActive: "2 min ago"
-        },
-        {
-            id: "ep_3",
-            method: "GET",
-            path: "/api/v1/products/search",
-            traffic24h: 89000,
-            trend: -2,
-            avgLatencyLive: 80,
-            avgLatencyShadow: 82,
-            errorRateLive: 0.1,
-            errorRateShadow: 15.5,
-            status: "critical",
-            lastActive: "Just now"
-        },
-        {
-            id: "ep_4",
-            method: "PUT",
-            path: "/api/v1/settings/profile",
-            traffic24h: 3400,
-            trend: 0,
-            avgLatencyLive: 60,
-            avgLatencyShadow: 58,
-            errorRateLive: 0,
-            errorRateShadow: 0,
-            status: "healthy",
-            lastActive: "15 min ago"
-        },
-        {
-            id: "ep_5",
-            method: "DELETE",
-            path: "/api/v1/cart/items",
-            traffic24h: 850,
-            trend: 1,
-            avgLatencyLive: 35,
-            avgLatencyShadow: 35,
-            errorRateLive: 0.2,
-            errorRateShadow: 0.2,
-            status: "healthy",
-            lastActive: "1 hr ago"
-        }
-    ],
+    endpoints: [],
     loading: false,
     error: null,
 };

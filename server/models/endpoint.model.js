@@ -17,4 +17,4 @@ const endpointSchema = new mongoose.Schema({
     }
 })
 
-module.exports = mongoose.model("endponts", endpointSchema)
+module.exports = mongoose.model("endpoints", endpointSchema)

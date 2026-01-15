@@ -16,6 +16,15 @@ const projectSchema = new mongoose.Schema({
         default: "Startup",
         enum: ["Developer", "Startup", "Enterprise"]
     },
+    apiKey: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    userId: {
+        type: String,
+        required: true
+    },
     liveUrl: String,
     shadowUrl: String,
     endpoints: [

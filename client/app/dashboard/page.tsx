@@ -13,12 +13,34 @@ import {
   MoreHorizontal,
   Search
 } from "lucide-react"
-import { useAppSelector } from '@/lib/store/hooks'
+import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
+import { fetchTrafficStats } from '@/lib/store/features/traffic/trafficSlice'
+import { fetchRecentDiffs as fetchDiffsAction } from '@/lib/store/features/diff/diffSlice'
+import { useEffect } from 'react'
+import ProjectSwitcher from '@/components/ProjectSwitcher'
 
 const Page = (): React.ReactNode => {
+  const dispatch = useAppDispatch()
   const { stats, trends } = useAppSelector((state) => state.traffic)
   const { recentComparisons } = useAppSelector((state) => state.diff)
   const { currentProject } = useAppSelector((state) => state.project)
+
+  // Fetch data on mount and poll every 30s
+  useEffect(() => {
+    if (currentProject.projectId) {
+      // Initial Fetch
+      dispatch(fetchTrafficStats())
+      dispatch(fetchDiffsAction())
+
+      // Polling
+      const interval = setInterval(() => {
+        dispatch(fetchTrafficStats())
+        dispatch(fetchDiffsAction())
+      }, 30000)
+
+      return () => clearInterval(interval)
+    }
+  }, [dispatch, currentProject.projectId])
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-6 md:p-8 overflow-y-auto">
@@ -31,6 +53,7 @@ const Page = (): React.ReactNode => {
         </div>
 
         <div className="flex items-center gap-3">
+          <ProjectSwitcher />
           <div className="hidden md:flex items-center bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-400">
             <Clock className="w-4 h-4 mr-2" />
             <span>Last 24 Hours</span>
@@ -116,23 +139,23 @@ const Page = (): React.ReactNode => {
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                   <span className="text-sm font-medium text-green-200">Logic Integrity</span>
                 </div>
-                <span className="text-green-500 font-bold">100%</span>
+                <span className="text-green-500 font-bold">{stats?.matchRate || "0%"}</span>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-center gap-3">
                   <Clock className="w-5 h-5 text-yellow-500" />
-                  <span className="text-sm font-medium text-yellow-200">Performance</span>
+                  <span className="text-sm font-medium text-yellow-200">Avg Latency</span>
                 </div>
-                <span className="text-yellow-500 font-bold">-2%</span>
+                <span className="text-yellow-500 font-bold">{stats?.avgLatency || "0ms"}</span>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <span className="text-sm font-medium text-red-200">New Errors</span>
+                  <span className="text-sm font-medium text-red-200">Shadow Errors</span>
                 </div>
-                <span className="text-red-500 font-bold">3 Crit</span>
+                <span className="text-red-500 font-bold">{stats?.shadowErrors || 0}</span>
               </div>
             </div>
           </div>

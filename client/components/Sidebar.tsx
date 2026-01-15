@@ -65,7 +65,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         {
             label: "Configuration",
             items: [
-                { title: "API Keys & Env", icon: Code2, href: "/dashboard/settings/keys" },
                 { title: "Project Settings", icon: Settings, href: "/dashboard/settings/project" },
             ]
         },

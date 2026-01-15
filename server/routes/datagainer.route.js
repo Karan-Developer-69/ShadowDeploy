@@ -1,15 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const refiner = require("../controller/refiner.controler");
+// const refiner = require("../controller/refiner.controler");
+const { ingestData } = require("../controller/dashboard.controller");
 
-router.post("/", (req, res) => {
-    const data = req.body;
-    // console.log(data)
-    const refinedData = refiner(data);
-
-    console.log("Refined & Stored:", refinedData.id);
-    res.json(refinedData);
-});
+router.post("/", ingestData);
 
 
 module.exports = router;

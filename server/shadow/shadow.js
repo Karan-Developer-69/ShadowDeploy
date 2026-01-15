@@ -1,46 +1,68 @@
 const { default: axios } = require("axios");
 
 class Shadow {
-    constructor(apiKey, projectId) {
-        this.apiKey = apiKey;
-        this.projectId = projectId
-        this.shadowUrl = 'http://localhost:6900'
+    constructor(config) {
+        this.apiKey = config.apiKey;
+        this.projectId = config.projectId;
+        this.shadowUrl = 'http://localhost:6900';
+
+        if (!this.apiKey || !this.projectId) {
+            console.error("Shadow Error: apiKey and projectId are required.");
+        }
     }
 
     async callWithTime(config) {
         const start = Date.now();
-        const response = await axios(config);
-        const end = Date.now();
-
-        return {
-            status: response.status,
-            headers: response.headers,
-            data: response.data,
-            responseTime: end - start,
-        };
+        try {
+            const response = await axios(config);
+            const end = Date.now();
+            return {
+                status: response.status,
+                headers: response.headers,
+                data: response.data,
+                responseTime: end - start,
+            };
+        } catch (error) {
+            const end = Date.now();
+            return {
+                status: error.response ? error.response.status : 500,
+                headers: error.response ? error.response.headers : {},
+                data: error.response ? error.response.data : error.message,
+                responseTime: end - start,
+            };
+        }
     }
 
 
 
-    shadowOpration = async (liveData, shadowData) => {
-        const response = await fetch(`${this.shadowUrl}/shadow/api/datagainer`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                liveData,
-                shadowData,
-                clientInfo: {
-                    apiKey: this.apiKey,
-                    projectId: this.projectId,
-                }
-            }),
-        });
-        console.log("------DATA SENDED TO SHADOW SERVER------");
+    shadowOperation = async (liveData, shadowData) => {
+        if (!this.apiKey || !this.projectId) return;
+
+        try {
+            const response = await fetch(`${this.shadowUrl}/shadow/api/datagainer`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    liveData,
+                    shadowData,
+                    clientInfo: {
+                        apiKey: this.apiKey,
+                        projectId: this.projectId,
+                    }
+                }),
+            });
+            console.log("------DATA SENT TO SHADOW SERVER------");
+        } catch (error) {
+            console.error("Shadow Operation Failed:", error.message);
+        }
     }
 
     proxyHandler = async (req, res, next) => {
+        if (!this.apiKey || !this.projectId) {
+            return next();
+        }
 
         const path = req.originalUrl;
 
@@ -82,7 +104,8 @@ class Shadow {
             };
 
             // 🔥 Shadow call AFTER response
-            const serverResponse = fetch(`${this.shadowUrl}/shadow/api/client/details`, {
+            // Validate credentials first
+            fetch(`${this.shadowUrl}/shadow/api/client/details`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -93,14 +116,19 @@ class Shadow {
                 }),
             })
                 .then(r => {
-                    console.log("shadow server res:", r)
-                    return r.json()
+                    if (!r.ok) throw new Error(`Validation Error: ${r.statusText}`);
+                    return r.json();
                 })
                 .then(serverRes => {
-                    console.log("refined res:", serverRes)
+                    if (!serverRes.shadowUrl) {
+                        console.warn("Shadow Warning: Invalid credentials or shadow URL not returned.");
+                        return;
+                    }
+
+                    // Credentials validated, proceeding...
                     const secondUrl = serverRes.shadowUrl;
-                    console.log("fetched URL: ", secondUrl)
                     const shadowUrl = secondUrl + path;
+
                     this.callWithTime({
                         method: req.method,
                         url: shadowUrl,
@@ -117,13 +145,12 @@ class Shadow {
                             endpoint: path,
                             shadowUrl: secondUrl,
                         }
-                        this.shadowOpration(fullResponseData, shadowData);
+                        this.shadowOperation(fullResponseData, shadowData);
                     }).catch(err => {
-                        console.log("Shadow error:", err.message);
+                        console.log("Shadow execution error:", err.message);
                     });
-                }
-
-                );
+                })
+                .catch(err => console.error("Shadow setup/validation error:", err.message));
 
         })
 

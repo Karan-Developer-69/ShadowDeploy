@@ -1,26 +1,40 @@
 const express = require("express");
-const { createProject } = require("../controller/project.controller");
-const { createEndpoint } = require("../controller/endpoint.controller");
-const { createDifference, getDifference } = require("../controller/differenc.controller");
-const { createTraffic, getTraffic } = require("../controller/traffic.controller");
+const { createProject, getProject, getUserProjects, updateProject } = require("../controller/project.controller");
+const { getTrafficStats, getTrafficLogs, getRecentDiffs, getEndpoints } = require("../controller/dashboard.controller");
+const { requireAuth } = require("../middleware/auth.middleware");
+
 const router = express.Router();
 
-router.post("/details", (req, res) => {
+const { validateProject } = require("../controller/project.controller");
+
+router.post("/details", async (req, res) => {
+    const { apiKey, projectId } = req.body;
+
+    if (!apiKey || !projectId) {
+        return res.status(400).json({ message: "apiKey and projectId required" });
+    }
+
+    const project = await validateProject(apiKey, projectId);
+
+    if (!project) {
+        return res.status(401).json({ message: "Invalid credentials" });
+    }
+
     res.json({
-        shadowUrl: "http://localhost:3002",
+        shadowUrl: project.shadowUrl || "http://localhost:3002",
     })
 })
 
-router.post('/project', createProject);
-router.get('/project/:id', getProject);
+// Protected routes - require authentication
+router.post('/project', requireAuth, createProject);
+router.get('/project/:id', requireAuth, getProject);
+router.put('/project/:id', requireAuth, updateProject);
+router.get('/user/projects', requireAuth, getUserProjects);
 
-router.post('/endpoint', createEndpoint);
-router.get('/endpoint', getEndpoint);
-
-router.post('/difference', createDifference);
-router.get('/difference', getDifference);
-
-router.post('/traffic', createTraffic);
-router.get('/traffic', getTraffic);
+// Dashboard data endpoints - all protected
+router.get('/endpoints', requireAuth, getEndpoints);
+router.get('/diffs/recent', requireAuth, getRecentDiffs);
+router.get('/traffic/stats', requireAuth, getTrafficStats);
+router.get('/traffic/logs', requireAuth, getTrafficLogs);
 
 module.exports = router

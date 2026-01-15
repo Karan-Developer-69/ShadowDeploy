@@ -9,6 +9,11 @@ const trafficSchema = new mongoose.Schema({
         type: Object,
         default: {}
     },
+    projectId: {
+        type: String,
+        required: true,
+        index: true
+    },
     liveLogs: {
         type: Array,
         default: []

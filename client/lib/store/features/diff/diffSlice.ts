@@ -50,71 +50,16 @@ interface DiffState {
 }
 
 const initialState: DiffState = {
-    recentComparisons: [
-        { id: "req_8x92", path: "/api/v1/users", method: "GET", liveStatus: 200, shadowStatus: 200, latencyDiff: "+12ms", match: true },
-        { id: "req_7z11", path: "/api/v1/auth/login", method: "POST", liveStatus: 200, shadowStatus: 500, latencyDiff: "---", match: false },
-        { id: "req_3a44", path: "/api/v1/products", method: "GET", liveStatus: 200, shadowStatus: 200, latencyDiff: "-5ms", match: true },
-        { id: "req_9c55", path: "/api/v1/checkout", method: "POST", liveStatus: 201, shadowStatus: 201, latencyDiff: "+45ms", match: true },
-        { id: "req_1b22", path: "/api/v1/search?q=t", method: "GET", liveStatus: 200, shadowStatus: 404, latencyDiff: "---", match: false },
-    ],
-    detailedComparisons: [
-        {
-            meta: { id: "req_88a", timestamp: "10:45:01", method: "GET", path: "/api/v1/users/profile" },
-            live: {
-                status: 200,
-                latency: 45,
-                body: { id: 101, name: "Alice", role: "admin", features: ["beta", "pro"] },
-                headers: { "content-type": "application/json" }
-            },
-            shadow: {
-                status: 200,
-                latency: 52,
-                body: { id: 101, name: "Alice", role: "user", features: ["beta"] },
-                headers: { "content-type": "application/json" }
-            },
-            diffSummary: { statusMatch: true, bodyMatch: false, latencyDiff: +7, breakingScore: 45 }
-        },
-        {
-            meta: { id: "req_88b", timestamp: "10:44:55", method: "POST", path: "/api/checkout" },
-            live: {
-                status: 201,
-                latency: 120,
-                body: { success: true, orderId: "ORD-999" },
-                headers: {}
-            },
-            shadow: {
-                status: 500,
-                latency: 15,
-                body: { error: "Internal Server Error", code: "DB_FAIL" },
-                headers: {}
-            },
-            diffSummary: { statusMatch: false, bodyMatch: false, latencyDiff: -105, breakingScore: 100 }
-        },
-        {
-            meta: { id: "req_88c", timestamp: "10:44:20", method: "GET", path: "/api/v1/settings" },
-            live: {
-                status: 200,
-                latency: 30,
-                body: { theme: "dark", notifications: true },
-                headers: {}
-            },
-            shadow: {
-                status: 200,
-                latency: 31,
-                body: { theme: "dark", notifications: true },
-                headers: {}
-            },
-            diffSummary: { statusMatch: true, bodyMatch: true, latencyDiff: +1, breakingScore: 0 }
-        }
-    ],
+    recentComparisons: [],
+    detailedComparisons: [],
     loading: false,
     error: null,
 };
 
 export const fetchRecentDiffs = createAsyncThunk(
     'diff/fetchRecent',
-    async () => {
-        const response = await diffService.getRecentDiffs();
+    async (projectId?: string) => {
+        const response = await diffService.getRecentDiffs(projectId);
         return response;
     }
 );
@@ -147,7 +92,13 @@ export const diffSlice = createSlice({
             })
             .addCase(fetchRecentDiffs.fulfilled, (state, action) => {
                 state.loading = false;
-                state.detailedComparisons = action.payload;
+                // Handle the complete diff object with both arrays
+                if (action.payload.recentComparisons) {
+                    state.recentComparisons = action.payload.recentComparisons;
+                }
+                if (action.payload.detailedComparisons) {
+                    state.detailedComparisons = action.payload.detailedComparisons;
+                }
             })
             .addCase(fetchRecentDiffs.rejected, (state, action) => {
                 state.loading = false;

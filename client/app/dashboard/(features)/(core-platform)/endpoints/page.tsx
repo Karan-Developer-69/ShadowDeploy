@@ -14,8 +14,11 @@ import {
     XCircle
 } from "lucide-react"
 
-import { useAppSelector } from '@/lib/store/hooks'
+import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
 import { HttpMethod, HealthStatus } from '@/lib/store/features/endpoint/endpointSlice'
+import { fetchEndpoints } from '@/lib/store/features/endpoint/endpointSlice'
+import ProjectSwitcher from '@/components/ProjectSwitcher'
+import { useEffect } from 'react'
 
 // --- COMPONENTS ---
 
@@ -23,6 +26,15 @@ const Page = (): React.ReactNode => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState<'all' | 'critical' | 'degraded'>('all');
     const { endpoints } = useAppSelector((state) => state.endpoint);
+    const { currentProject } = useAppSelector((state) => state.project);
+    const dispatch = useAppDispatch();
+
+    // Fetch data on mount and when project changes
+    useEffect(() => {
+        if (currentProject.projectId) {
+            dispatch(fetchEndpoints());
+        }
+    }, [dispatch, currentProject.projectId]);
 
     // Filter Logic
     const filteredEndpoints = useMemo(() => {
@@ -32,6 +44,27 @@ const Page = (): React.ReactNode => {
             return matchesSearch && matchesFilter;
         });
     }, [searchTerm, filter, endpoints]);
+
+    // Calculate stats from endpoints
+    const stats = useMemo(() => {
+        const total = endpoints.length || 1; // Avoid division by zero
+        const healthy = endpoints.filter(ep => ep.status === 'healthy').length;
+        const critical = endpoints.filter(ep => ep.status === 'critical').length;
+        const degraded = endpoints.filter(ep => ep.status === 'degraded').length;
+        const healthyPercentage = Math.round((healthy / total) * 100);
+
+        // Calculate average latency difference
+        const totalLatencyDiff = endpoints.reduce((sum, ep) => sum + (ep.avgLatencyShadow - ep.avgLatencyLive), 0);
+        const avgLatencyDiff = endpoints.length > 0 ? Math.round(totalLatencyDiff / endpoints.length) : 0;
+
+        return {
+            healthyPercentage,
+            healthy,
+            critical,
+            degraded,
+            avgLatencyDiff
+        };
+    }, [endpoints]);
 
     return (
         <div className="min-h-screen bg-[#050505] text-white p-6 md:p-8 flex flex-col gap-8 font-sans">
@@ -46,6 +79,7 @@ const Page = (): React.ReactNode => {
                         </p>
                     </div>
                     <div className="flex gap-3 mt-4 md:mt-0">
+                        <ProjectSwitcher />
                         <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:text-white transition-colors">
                             <Clock className="w-4 h-4" /> 24h Window
                         </button>
@@ -59,8 +93,8 @@ const Page = (): React.ReactNode => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatsCard
                         label="Healthy Endpoints"
-                        value="92%"
-                        sub="Stable performance"
+                        value={`${stats.healthyPercentage}%`}
+                        sub={`${stats.healthy}/${endpoints.length} endpoints stable`}
                         icon={CheckCircle2}
                         color="text-green-500"
                         bg="bg-green-500/10"
@@ -68,7 +102,7 @@ const Page = (): React.ReactNode => {
                     />
                     <StatsCard
                         label="Critical Regressions"
-                        value="3"
+                        value={stats.critical.toString()}
                         sub="Requires immediate attention"
                         icon={XCircle}
                         color="text-red-500"
@@ -77,12 +111,12 @@ const Page = (): React.ReactNode => {
                     />
                     <StatsCard
                         label="Latency Degradation"
-                        value="Avg +12ms"
-                        sub="Shadow is slightly slower"
+                        value={`Avg ${stats.avgLatencyDiff >= 0 ? '+' : ''}${stats.avgLatencyDiff}ms`}
+                        sub={stats.avgLatencyDiff > 0 ? 'Shadow is slower' : 'Shadow is faster'}
                         icon={Activity}
-                        color="text-yellow-500"
-                        bg="bg-yellow-500/10"
-                        border="border-yellow-500/20"
+                        color={stats.avgLatencyDiff > 10 ? "text-yellow-500" : "text-green-500"}
+                        bg={stats.avgLatencyDiff > 10 ? "bg-yellow-500/10" : "bg-green-500/10"}
+                        border={stats.avgLatencyDiff > 10 ? "border-yellow-500/20" : "border-green-500/20"}
                     />
                 </div>
             </div>
@@ -191,7 +225,7 @@ const Page = (): React.ReactNode => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
 

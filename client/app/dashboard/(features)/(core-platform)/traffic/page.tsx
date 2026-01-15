@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Play,
   Pause,
@@ -10,21 +10,71 @@ import {
   MoreHorizontal,
   ArrowRight,
   WifiOff,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
-import { useAppSelector } from '@/lib/store/hooks'
+import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
+import { fetchTrafficLogs } from '@/lib/store/features/traffic/trafficSlice'
+import { exportToCSV } from '@/lib/utils/export'
+import ProjectSwitcher from '@/components/ProjectSwitcher'
+import { useEffect } from 'react'
 
 const Page = (): React.ReactNode => {
+  const dispatch = useAppDispatch()
   const [isPaused, setIsPaused] = useState(false)
   const [filterText, setFilterText] = useState('')
-  const { liveLogs } = useAppSelector((state) => state.traffic)
+  const [methodFilter, setMethodFilter] = useState<string>('all')
+  const [errorsOnly, setErrorsOnly] = useState(false)
+  const { liveLogs, loading } = useAppSelector((state) => state.traffic)
+  const { currentProject } = useAppSelector((state) => state.project)
 
-  const filteredLogs = liveLogs.filter(log =>
-    log.id.toLowerCase().includes(filterText.toLowerCase()) ||
-    log.path.toLowerCase().includes(filterText.toLowerCase()) ||
-    log.method.toLowerCase().includes(filterText.toLowerCase())
-  );
+  // Apply filters
+  const filteredLogs = useMemo(() => {
+    return liveLogs.filter(log => {
+      // Text search filter
+      const matchesText = !filterText ||
+        log.id.toLowerCase().includes(filterText.toLowerCase()) ||
+        log.path.toLowerCase().includes(filterText.toLowerCase()) ||
+        log.method.toLowerCase().includes(filterText.toLowerCase());
+
+      // Method filter
+      const matchesMethod = methodFilter === 'all' || log.method === methodFilter;
+
+      // Error filter
+      const matchesError = !errorsOnly || log.live >= 400 || log.shadow >= 400;
+
+      return matchesText && matchesMethod && matchesError;
+    });
+  }, [liveLogs, filterText, methodFilter, errorsOnly]);
+
+  // Handle export
+  const handleExport = () => {
+    const exportData = filteredLogs.map(log => ({
+      Timestamp: log.time,
+      ID: log.id,
+      Method: log.method,
+      Path: log.path,
+      LiveStatus: log.live,
+      ShadowStatus: log.shadow,
+      LiveLatency: `${log.latencyLive}ms`,
+      ShadowLatency: `${log.latencyShadow}ms`,
+      Match: log.live === log.shadow ? 'Yes' : 'No'
+    }));
+    exportToCSV(exportData, `traffic_${currentProject.name || 'export'}`);
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    dispatch(fetchTrafficLogs());
+  };
+
+  // Fetch data on mount and when project changes
+  useEffect(() => {
+    if (currentProject.projectId) {
+      dispatch(fetchTrafficLogs());
+    }
+  }, [dispatch, currentProject.projectId]);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -53,6 +103,7 @@ const Page = (): React.ReactNode => {
         </div>
 
         <div className="flex items-center gap-2">
+          <ProjectSwitcher />
           <div className="mr-2">
             <ModeToggle />
           </div>
@@ -63,8 +114,18 @@ const Page = (): React.ReactNode => {
             {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
             {isPaused ? "Resume" : "Pause"}
           </button>
-          <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
+          <button
+            onClick={handleRefresh}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+            title="Refresh data"
+          >
             <RotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-3 py-2 bg-accent text-accent-foreground hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" /> Export
           </button>
         </div>
       </header>
@@ -83,14 +144,38 @@ const Page = (): React.ReactNode => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <FilterBtn label="All Methods" active />
-          <FilterBtn label="GET" />
-          <FilterBtn label="POST" />
-          <FilterBtn label="Errors Only" icon={AlertCircle} />
+          <FilterBtn
+            label="All Methods"
+            active={methodFilter === 'all'}
+            onClick={() => setMethodFilter('all')}
+          />
+          <FilterBtn
+            label="GET"
+            active={methodFilter === 'GET'}
+            onClick={() => setMethodFilter('GET')}
+          />
+          <FilterBtn
+            label="POST"
+            active={methodFilter === 'POST'}
+            onClick={() => setMethodFilter('POST')}
+          />
+          <FilterBtn
+            label="PUT"
+            active={methodFilter === 'PUT'}
+            onClick={() => setMethodFilter('PUT')}
+          />
+          <FilterBtn
+            label="DELETE"
+            active={methodFilter === 'DELETE'}
+            onClick={() => setMethodFilter('DELETE')}
+          />
           <div className="h-6 w-px bg-border mx-1" />
-          <button className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-            <Filter className="w-3 h-3" /> More Filters
-          </button>
+          <FilterBtn
+            label="Errors Only"
+            icon={AlertCircle}
+            active={errorsOnly}
+            onClick={() => setErrorsOnly(!errorsOnly)}
+          />
         </div>
       </div>
 
@@ -172,16 +257,34 @@ const Page = (): React.ReactNode => {
             </div>
           ))}
 
-          {/* Loading / End State */}
-          <div className="py-12 text-center">
-            <div className="inline-flex items-center gap-2 text-muted-foreground text-sm">
-              <span className="relative flex h-2 w-2 mr-1">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              <span>Listening for requests...</span>
+          {/* Loading / Empty State */}
+          {loading && liveLogs.length === 0 && (
+            <div className="py-12 text-center">
+              <div className="inline-flex items-center gap-2 text-muted-foreground text-sm">
+                <span className="relative flex h-2 w-2 mr-1">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                <span>Loading traffic data...</span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {!loading && liveLogs.length === 0 && (
+            <div className="py-12 text-center">
+              <WifiOff className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-sm">No traffic data yet</p>
+              <p className="text-muted-foreground/70 text-xs mt-1">Waiting for requests...</p>
+            </div>
+          )}
+
+          {!loading && liveLogs.length > 0 && filteredLogs.length === 0 && (
+            <div className="py-12 text-center">
+              <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-sm">No matches found</p>
+              <p className="text-muted-foreground/70 text-xs mt-1">Try adjusting your filters</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -191,14 +294,16 @@ const Page = (): React.ReactNode => {
 
 // --- Components ---
 
-const FilterBtn = ({ label, active, icon: Icon }: { label: string, active?: boolean, icon?: React.ElementType }) => (
-  <button className={`
-    flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap shadow-sm
-    ${active
-      ? "bg-primary text-primary-foreground border-primary"
-      : "bg-background text-muted-foreground border-input hover:border-accent-foreground/20 hover:text-foreground hover:bg-accent"
-    }
-  `}>
+const FilterBtn = ({ label, active, icon: Icon, onClick }: { label: string, active?: boolean, icon?: React.ElementType, onClick?: () => void }) => (
+  <button
+    onClick={onClick}
+    className={`
+      flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap shadow-sm
+      ${active
+        ? "bg-primary text-primary-foreground border-primary"
+        : "bg-background text-muted-foreground border-input hover:border-accent-foreground/20 hover:text-foreground hover:bg-accent"
+      }
+    `}>
     {Icon && <Icon className="w-3 h-3" />}
     {label}
   </button>

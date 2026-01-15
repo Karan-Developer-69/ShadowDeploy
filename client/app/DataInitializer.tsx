@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/lib/store/hooks'
+import { useAuth } from '@clerk/nextjs'
+import { useAppDispatch } from '@/lib/store/hooks'
+import { setAuthTokenGetter } from '@/lib/api/axios'
 import { fetchProjectDetails } from '@/lib/store/features/project/projectSlice'
-import { fetchTrafficStats, fetchTrafficLogs } from '@/lib/store/features/traffic/trafficSlice'
-import { fetchRecentDiffs } from '@/lib/store/features/diff/diffSlice'
-import { fetchEndpoints } from '@/lib/store/features/endpoint/endpointSlice'
 
 export default function DataInitializer({
     children,
@@ -13,22 +12,19 @@ export default function DataInitializer({
     children: React.ReactNode
 }) {
     const dispatch = useAppDispatch()
-    const { currentProject } = useAppSelector((state) => state.project) || {};
+    const { getToken } = useAuth()
 
-    // Fetch project details on mount (always)
+    // Set up auth token getter for API calls
+    useEffect(() => {
+        setAuthTokenGetter(async () => {
+            return await getToken();
+        });
+    }, [getToken]);
+
+    // Fetch all projects on mount - this will also set the first project as current
     useEffect(() => {
         dispatch(fetchProjectDetails())
     }, [dispatch])
-
-    // Fetch operational data ONLY when we have both liveUrl and shadowUrl
-    useEffect(() => {
-        if (currentProject.liveUrl && currentProject.shadowUrl) {
-            dispatch(fetchTrafficStats())
-            dispatch(fetchTrafficLogs())
-            dispatch(fetchRecentDiffs())
-            dispatch(fetchEndpoints())
-        }
-    }, [dispatch, currentProject.liveUrl, currentProject.shadowUrl])
 
     return <>{children}</>
 }

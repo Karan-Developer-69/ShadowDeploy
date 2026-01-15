@@ -16,9 +16,12 @@ import {
 } from "lucide-react"
 
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
-import { setProject } from '@/lib/store/features/project/projectSlice'
+import { setProject, createProject, fetchProjectDetails } from '@/lib/store/features/project/projectSlice'
+
+import { useAuth } from '@clerk/nextjs'
 
 const Page = (): React.ReactNode => {
+    const { userId } = useAuth()
     const [copied, setCopied] = useState(false)
     const dispatch = useAppDispatch()
 
@@ -27,13 +30,11 @@ const Page = (): React.ReactNode => {
 
     // Local state for form inputs (initialized from Redux)
     const [localProjectName, setLocalProjectName] = useState(currentProject.name)
-    const [localLiveUrl, setLocalLiveUrl] = useState(currentProject.liveUrl)
     const [localShadowUrl, setLocalShadowUrl] = useState(currentProject.shadowUrl)
 
     // Sync local state when redux state changes (e.g. initial load)
     React.useEffect(() => {
         setLocalProjectName(currentProject.name)
-        setLocalLiveUrl(currentProject.liveUrl)
         setLocalShadowUrl(currentProject.shadowUrl)
     }, [currentProject])
 
@@ -46,7 +47,7 @@ const Page = (): React.ReactNode => {
     })
 
     const handleCopyId = () => {
-        navigator.clipboard.writeText("proj_8x92nm...992mkLO")
+        navigator.clipboard.writeText(currentProject.projectId || "")
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
@@ -55,15 +56,38 @@ const Page = (): React.ReactNode => {
         setSettings(prev => ({ ...prev, [key]: !prev[key] }))
     }
 
-    const handleSaveChanges = () => {
-        dispatch(setProject({
-            ...currentProject,
-            name: localProjectName,
-            liveUrl: localLiveUrl,
-            shadowUrl: localShadowUrl
-        }))
-        // Ideally add toast notification here
-        alert("Changes saved to global store!")
+    const handleSaveChanges = async () => {
+        if (!userId) {
+            alert("Please sign in to create a project.")
+            return
+        }
+
+        if (!currentProject.projectId) {
+            // Create mode
+            try {
+                await dispatch(createProject({
+                    name: localProjectName,
+                    liveUrl: "", // Removed from UI, sending empty string
+                    shadowUrl: localShadowUrl,
+                    userId: userId
+                })).unwrap()
+
+                // Refetch all projects to ensure frontend is in sync with backend
+                await dispatch(fetchProjectDetails()).unwrap()
+                alert("Project created successfully!")
+            } catch (error) {
+                console.error("Failed to create project:", error)
+                alert("Failed to create project. Please try again.")
+            }
+        } else {
+            // Update mode
+            dispatch(setProject({
+                ...currentProject,
+                name: localProjectName,
+                shadowUrl: localShadowUrl
+            }))
+            alert("Changes saved to global store!")
+        }
     }
 
     return (
@@ -74,13 +98,13 @@ const Page = (): React.ReactNode => {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight mb-2">Project Settings</h1>
                     <p className="text-zinc-400 text-sm">
-                        Manage configuration for <span className="text-white font-medium">{localProjectName}</span>.
+                        Manage configuration for <span className="text-white font-medium">{localProjectName || "New Project"}</span>.
                     </p>
                 </div>
                 <button
                     onClick={handleSaveChanges}
                     className="flex items-center gap-2 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-white/5">
-                    <Save className="w-4 h-4" /> Save Changes
+                    <Save className="w-4 h-4" /> {currentProject.projectId ? "Save Changes" : "Create Project"}
                 </button>
             </div>
 
@@ -102,6 +126,7 @@ const Page = (): React.ReactNode => {
                                     type="text"
                                     value={localProjectName}
                                     onChange={(e) => setLocalProjectName(e.target.value)}
+                                    placeholder="Enter project name..."
                                     className="w-full bg-black/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8E1616] transition-colors"
                                 />
                             </div>
@@ -112,17 +137,31 @@ const Page = (): React.ReactNode => {
                                 <div className="relative group">
                                     <input
                                         type="text"
-                                        value="proj_8x92nm...992mkLO"
+                                        value={currentProject.projectId || "Not Created Yet"}
                                         readOnly
                                         className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-500 font-mono focus:outline-none cursor-copy"
                                         onClick={handleCopyId}
                                     />
-                                    <button
-                                        onClick={handleCopyId}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                                    >
-                                        {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                                    </button>
+                                    {currentProject.projectId && (
+                                        <button
+                                            onClick={handleCopyId}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                        >
+                                            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            {/* API Key (Read Only) */}
+                            <div className="space-y-2 md:col-span-2">
+                                <label className="text-sm font-medium text-zinc-300">API Key</label>
+                                <div className="relative group">
+                                    <input
+                                        type="text"
+                                        value={currentProject.apiKey || "Hidden / Not Created"}
+                                        readOnly
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-500 font-mono focus:outline-none cursor-copy"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -139,25 +178,11 @@ const Page = (): React.ReactNode => {
                     <div className="p-6 space-y-6">
                         <div className="p-4 bg-blue-900/10 border border-blue-900/30 rounded-lg flex gap-3 text-sm text-blue-200 mb-4">
                             <Activity className="w-5 h-5 shrink-0 text-blue-400" />
-                            <p>Requests are mirrored from your Live URL to the Shadow URL asynchronously. Ensure your Shadow URL is accessible from our public IPs.</p>
+                            <p>Requests are mirrored asynchronously. Ensure your Shadow URL is accessible from our public IPs.</p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-6">
-                            {/* Live URL */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-500"></span> Live Environment (Source)
-                                </label>
-                                <div className="flex">
-                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-zinc-800 bg-zinc-900 text-zinc-500 text-sm">https://</span>
-                                    <input
-                                        type="text"
-                                        value={localLiveUrl.replace('https://', '')}
-                                        onChange={(e) => setLocalLiveUrl(e.target.value.startsWith('https://') ? e.target.value : `https://${e.target.value}`)}
-                                        className="flex-1 bg-black/50 border border-zinc-800 rounded-r-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8E1616] font-mono"
-                                    />
-                                </div>
-                            </div>
+                            {/* Live URL Removed as per request */}
 
                             {/* Shadow URL */}
                             <div className="space-y-2">
@@ -165,11 +190,11 @@ const Page = (): React.ReactNode => {
                                     <span className="w-2 h-2 rounded-full bg-[#8E1616]"></span> Shadow Environment (Target)
                                 </label>
                                 <div className="flex">
-                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-zinc-800 bg-zinc-900 text-zinc-500 text-sm">https://</span>
+                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-zinc-800 bg-zinc-900 text-zinc-500 text-sm">URL --&gt; </span>
                                     <input
                                         type="text"
-                                        value={localShadowUrl.replace('https://', '')}
-                                        onChange={(e) => setLocalShadowUrl(e.target.value.startsWith('https://') ? e.target.value : `https://${e.target.value}`)}
+                                        value={localShadowUrl}
+                                        onChange={(e) => setLocalShadowUrl(e.target.value.startsWith('https://') || e.target.value.startsWith('http://') ? e.target.value : `${e.target.value}`)}
                                         className="flex-1 bg-black/50 border border-zinc-800 rounded-r-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#8E1616] font-mono"
                                     />
                                 </div>

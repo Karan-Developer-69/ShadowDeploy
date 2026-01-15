@@ -8,11 +8,15 @@ import {
     XCircle,
     Clock,
     Code2,
-    FileJson
+    FileJson,
+    Loader2,
+    AlertCircle
 } from "lucide-react"
 
-import { useAppSelector } from '@/lib/store/hooks'
-// Types inferred from store state, explicit imports removed if unused
+import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
+import { fetchRecentDiffs } from '@/lib/store/features/diff/diffSlice'
+import ProjectSwitcher from '@/components/ProjectSwitcher'
+import { useEffect } from 'react'
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -97,9 +101,18 @@ const JsonDiffRow = ({
 // --- MAIN PAGE COMPONENT ---
 
 const Page = (): React.ReactNode => {
-    const { detailedComparisons } = useAppSelector((state) => state.diff);
+    const { detailedComparisons, loading, error } = useAppSelector((state) => state.diff);
+    const { currentProject } = useAppSelector((state) => state.project);
+    const dispatch = useAppDispatch();
     const [selectedId, setSelectedId] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'body' | 'headers'>('body');
+
+    // Fetch data on mount and when project changes
+    useEffect(() => {
+        if (currentProject.projectId) {
+            dispatch(fetchRecentDiffs());
+        }
+    }, [dispatch, currentProject.projectId]);
 
     // Initialize selectedId when data is available
     React.useEffect(() => {
@@ -113,7 +126,93 @@ const Page = (): React.ReactNode => {
         detailedComparisons.find(c => c.meta.id === selectedId) || detailedComparisons[0],
         [selectedId, detailedComparisons]);
 
-    if (!currentData) return <div className="p-8 text-center text-zinc-500">No diff data available</div>;
+    // Helper to ensure body/headers are objects, not strings
+    const ensureObject = (data: unknown): Record<string, JsonValue> => {
+        if (typeof data === 'string') {
+            try {
+                return JSON.parse(data);
+            } catch {
+                return { value: data };
+            }
+        }
+        return (data as Record<string, JsonValue>) || {} as Record<string, JsonValue>;
+    };
+
+    // Normalize current data to ensure bodies are always objects
+    const normalizedData = useMemo(() => {
+        if (!currentData) return null;
+        return {
+            ...currentData,
+            live: {
+                ...currentData.live,
+                body: ensureObject(currentData.live.body),
+                headers: ensureObject(currentData.live.headers)
+            },
+            shadow: {
+                ...currentData.shadow,
+                body: ensureObject(currentData.shadow.body),
+                headers: ensureObject(currentData.shadow.headers)
+            }
+        };
+    }, [currentData]);
+
+    // Calculate stats from data
+    const stats = useMemo(() => {
+        const critical = detailedComparisons.filter(d => d.diffSummary.breakingScore > 50).length;
+        const warnings = detailedComparisons.filter(d => d.diffSummary.breakingScore > 0 && d.diffSummary.breakingScore <= 50).length;
+        return { critical, warnings };
+    }, [detailedComparisons]);
+
+    // Use normalized data for rendering
+    const displayData = normalizedData || currentData;
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-[#050505] text-white">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-[#8E1616] animate-spin mx-auto mb-4" />
+                    <p className="text-zinc-400">Loading diff comparisons...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-[#050505] text-white">
+                <div className="text-center max-w-md">
+                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold mb-2">Error Loading Diffs</h2>
+                    <p className="text-zinc-400 mb-4">{error}</p>
+                    <button
+                        onClick={() => dispatch(fetchRecentDiffs(currentProject.projectId))}
+                        className="px-4 py-2 bg-[#8E1616] hover:bg-[#8E1616]/80 rounded-lg transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (detailedComparisons.length === 0) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-[#050505] text-white">
+                <div className="text-center max-w-md">
+                    <GitCompare className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold mb-2">No Diff Data Available</h2>
+                    <p className="text-zinc-400">
+                        Start sending requests through your shadow deployment to see comparisons here.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!displayData) return null;
 
     return (
         <div className="h-screen flex flex-col bg-[#050505] text-white overflow-hidden">
@@ -126,11 +225,14 @@ const Page = (): React.ReactNode => {
                     </div>
                     <h1 className="text-base md:text-lg font-bold tracking-tight">Comparison Engine</h1>
                 </div>
-                <div className="hidden md:flex items-center gap-4 text-sm text-zinc-500">
-                    <span>Environment: <span className="text-zinc-200">Production</span></span>
-                    <span className="h-4 w-px bg-zinc-800" />
-                    <span>Baseline: <span className="text-green-500">v1.2.0</span></span>
-                    <span>Candidate: <span className="text-[#8E1616]">v1.3.0-rc</span></span>
+                <div className="flex items-center gap-3">
+                    <ProjectSwitcher />
+                    <div className="hidden md:flex items-center gap-4 text-sm text-zinc-500">
+                        <span>Environment: <span className="text-zinc-200">Production</span></span>
+                        <span className="h-4 w-px bg-zinc-800" />
+                        <span>Baseline: <span className="text-green-500">v1.2.0</span></span>
+                        <span>Candidate: <span className="text-[#8E1616]">v1.3.0-rc</span></span>
+                    </div>
                 </div>
             </header>
 
@@ -142,8 +244,8 @@ const Page = (): React.ReactNode => {
                     <div className="p-4 border-b border-zinc-800">
                         <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Recent Mismatches</h3>
                         <div className="flex gap-2">
-                            <span className="px-2 py-1 bg-red-500/10 text-red-500 text-xs rounded border border-red-500/20">3 Critical</span>
-                            <span className="px-2 py-1 bg-yellow-500/10 text-yellow-500 text-xs rounded border border-yellow-500/20">12 Warnings</span>
+                            <span className="px-2 py-1 bg-red-500/10 text-red-500 text-xs rounded border border-red-500/20">{stats.critical} Critical</span>
+                            <span className="px-2 py-1 bg-yellow-500/10 text-yellow-500 text-xs rounded border border-yellow-500/20">{stats.warnings} Warnings</span>
                         </div>
                     </div>
 
@@ -183,6 +285,13 @@ const Page = (): React.ReactNode => {
                                             <AlertTriangle className="w-3 h-3" /> Body Diff
                                         </div>
                                     )}
+
+                                    {/* 404 Indicator */}
+                                    {item.shadow.status === 404 && (
+                                        <div className="flex items-center gap-1 text-[10px] text-orange-400 bg-orange-400/10 px-1.5 rounded">
+                                            <XCircle className="w-3 h-3" /> 404
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -195,18 +304,18 @@ const Page = (): React.ReactNode => {
                     {/* 1. Request Summary Bar */}
                     <div className="h-16 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-900/20">
                         <div className="flex items-center gap-4 overflow-hidden">
-                            <span className="text-xl font-mono text-white font-bold">{currentData.meta.method}</span>
-                            <span className="text-lg text-zinc-400 truncate">{currentData.meta.path}</span>
+                            <span className="text-xl font-mono text-white font-bold">{displayData.meta.method}</span>
+                            <span className="text-lg text-zinc-400 truncate">{displayData.meta.path}</span>
                         </div>
 
                         {/* Breaking Score Badge */}
                         <div className="flex items-center gap-3">
                             <div className="text-right">
                                 <p className="text-[10px] text-zinc-500 uppercase font-bold">Risk Score</p>
-                                <p className={`text-lg font-bold leading-none ${currentData.diffSummary.breakingScore > 50 ? 'text-red-500' :
-                                    currentData.diffSummary.breakingScore > 0 ? 'text-yellow-500' : 'text-green-500'
+                                <p className={`text-lg font-bold leading-none ${displayData.diffSummary.breakingScore > 50 ? 'text-red-500' :
+                                    displayData.diffSummary.breakingScore > 0 ? 'text-yellow-500' : 'text-green-500'
                                     }`}>
-                                    {currentData.diffSummary.breakingScore}%
+                                    {displayData.diffSummary.breakingScore}%
                                 </p>
                             </div>
                         </div>
@@ -222,11 +331,11 @@ const Page = (): React.ReactNode => {
                                     <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                                     <span className="text-sm font-bold text-zinc-300">LIVE (Baseline)</span>
                                 </div>
-                                <StatusBadge status={currentData.live.status} />
+                                <StatusBadge status={displayData.live.status} />
                             </div>
                             <div className="flex items-center gap-2 text-zinc-400 text-sm">
                                 <Clock className="w-4 h-4" />
-                                <span>{currentData.live.latency}ms</span>
+                                <span>{displayData.live.latency}ms</span>
                             </div>
                         </div>
 
@@ -240,15 +349,15 @@ const Page = (): React.ReactNode => {
                                     <div className="w-2 h-2 rounded-full bg-[#8E1616] shadow-[0_0_8px_rgba(142,22,22,0.6)]"></div>
                                     <span className="text-sm font-bold text-zinc-300">SHADOW (Candidate)</span>
                                 </div>
-                                <StatusBadge status={currentData.shadow.status} />
+                                <StatusBadge status={displayData.shadow.status} />
                             </div>
                             <div className="flex items-center gap-2 text-zinc-400 text-sm">
                                 <Clock className="w-4 h-4" />
-                                <span className={currentData.shadow.latency > currentData.live.latency ? 'text-yellow-500' : 'text-green-500'}>
-                                    {currentData.shadow.latency}ms
+                                <span className={displayData.shadow.latency > displayData.live.latency ? 'text-yellow-500' : 'text-green-500'}>
+                                    {displayData.shadow.latency}ms
                                 </span>
                                 <span className="text-xs text-zinc-600">
-                                    ({currentData.diffSummary.latencyDiff > 0 ? '+' : ''}{currentData.diffSummary.latencyDiff}ms)
+                                    ({displayData.diffSummary.latencyDiff > 0 ? '+' : ''}{displayData.diffSummary.latencyDiff}ms)
                                 </span>
                             </div>
                         </div>
@@ -286,12 +395,12 @@ const Page = (): React.ReactNode => {
                             {/* Actual Diff Rendering */}
                             <div className="pb-10">
                                 {activeTab === 'body' ? (
-                                    Object.keys(currentData.live.body).map((key) => (
+                                    Object.keys(displayData.live.body).map((key) => (
                                         <JsonDiffRow
                                             key={key}
                                             lKey={key}
-                                            lVal={currentData.live.body[key]}
-                                            rVal={currentData.shadow.body[key]}
+                                            lVal={displayData.live.body[key]}
+                                            rVal={displayData.shadow.body[key]}
                                         />
                                     ))
                                 ) : (
@@ -316,9 +425,24 @@ const Page = (): React.ReactNode => {
 // --- SUB COMPONENTS ---
 
 const StatusBadge = ({ status }: { status: number }) => {
-    const color = status === 200 || status === 201 ? 'bg-green-500/20 text-green-400 border-green-500/30'
-        : status === 500 ? 'bg-red-500/20 text-red-400 border-red-500/30'
-            : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    let color: string;
+
+    if (status >= 200 && status < 300) {
+        // Success (2xx)
+        color = 'bg-green-500/20 text-green-400 border-green-500/30';
+    } else if (status === 404) {
+        // Not Found
+        color = 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+    } else if (status >= 400 && status < 500) {
+        // Client errors (4xx)
+        color = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    } else if (status >= 500) {
+        // Server errors (5xx)
+        color = 'bg-red-500/20 text-red-400 border-red-500/30';
+    } else {
+        // Other
+        color = 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30';
+    }
 
     return (
         <span className={`px-2.5 py-0.5 rounded text-xs font-mono font-bold border ${color}`}>

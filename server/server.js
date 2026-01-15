@@ -3,7 +3,10 @@ const cors = require('cors');
 const Shadow = require('./shadow/shadow');
 
 const app = express();
-const shadow = new Shadow("http://localhost:3002", apiKey = "karan", projectId = "hexa123");
+const shadow = new Shadow({
+    apiKey: "sk_25uh2s8g0",
+    projectId: "proj_m5nza2j8u"
+});
 require('dotenv').config()
 app.use(cors());
 app.use(express.json());

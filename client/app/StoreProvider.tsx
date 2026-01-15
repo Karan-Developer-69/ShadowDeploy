@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Provider } from 'react-redux'
 import { makeStore } from '../lib/store/store'
+import { setStoreGetter } from '@/lib/api/axios'
 
 import DataInitializer from './DataInitializer'
 
@@ -16,6 +17,11 @@ export default function StoreProvider({
         const storeInstance = makeStore()
         return storeInstance
     })
+
+    // Set store getter for axios interceptor
+    useEffect(() => {
+        setStoreGetter(() => store)
+    }, [store])
 
     return (
         <Provider store={store}>
