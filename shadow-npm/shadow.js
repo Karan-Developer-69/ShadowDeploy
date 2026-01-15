@@ -4,7 +4,7 @@ class Shadow {
     constructor(config) {
         this.apiKey = config.apiKey;
         this.projectId = config.projectId;
-        this.shadowUrl = 'http://localhost:6900';
+        this.shadowUrl = 'https://shadow-api-k2df.onrender.com';
 
         if (!this.apiKey || !this.projectId) {
             console.error("Shadow Error: apiKey and projectId are required.");
