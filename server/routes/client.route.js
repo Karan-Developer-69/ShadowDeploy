@@ -9,13 +9,14 @@ const { validateProject } = require("../controller/project.controller");
 
 router.post("/details", async (req, res) => {
     const { apiKey, projectId } = req.body;
-
+    console.log("1. API proj", apiKey, projectId)
     if (!apiKey || !projectId) {
         return res.status(400).json({ message: "apiKey and projectId required" });
     }
-
+    console.log("2. API proj", apiKey, projectId)
     const project = await validateProject(apiKey, projectId);
 
+    console.log("5. API proj", apiKey, projectId)
     if (!project) {
         return res.status(401).json({ message: "Invalid credentials" });
     }

@@ -1,6 +1,9 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { projectService } from '@/lib/api/services';
 
+const PROJECT_STORAGE_KEY = 'shadowdeploy_current_project';
+const ALL_PROJECTS_STORAGE_KEY = 'shadowdeploy_all_projects';
+
 export interface ProjectState {
     currentProject: {
         name: string;
@@ -28,8 +31,25 @@ export interface ProjectState {
     error: string | null;
 }
 
+// Helper to load from localStorage
+const loadFromStorage = () => {
+    try {
+        const savedProject = localStorage.getItem(PROJECT_STORAGE_KEY);
+        const savedAllProjects = localStorage.getItem(ALL_PROJECTS_STORAGE_KEY);
+        return {
+            currentProject: savedProject ? JSON.parse(savedProject) : null,
+            allProjects: savedAllProjects ? JSON.parse(savedAllProjects) : [],
+        };
+    } catch (error) {
+        console.error('Failed to load from localStorage:', error);
+        return { currentProject: null, allProjects: [] };
+    }
+};
+
+const cached = loadFromStorage();
+
 const initialState: ProjectState = {
-    currentProject: {
+    currentProject: cached.currentProject || {
         name: '',
         projectId: '',
         apiKey: '',
@@ -38,7 +58,7 @@ const initialState: ProjectState = {
         liveUrl: '',
         shadowUrl: '',
     },
-    allProjects: [],
+    allProjects: cached.allProjects,
     usage: {
         percentage: 10,
         resetDays: 12,
@@ -78,6 +98,10 @@ export const projectSlice = createSlice({
     reducers: {
         setProject: (state, action: PayloadAction<ProjectState['currentProject']>) => {
             state.currentProject = action.payload;
+            // Persist to localStorage
+            if (action.payload.projectId && action.payload.apiKey) {
+                localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(action.payload));
+            }
         },
         updateUsage: (state, action: PayloadAction<Partial<ProjectState['usage']>>) => {
             state.usage = { ...state.usage, ...action.payload };
@@ -87,6 +111,8 @@ export const projectSlice = createSlice({
             const project = state.allProjects.find(p => p.projectId === action.payload);
             if (project) {
                 state.currentProject = project;
+                // Persist to localStorage
+                localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
             }
         },
         resetCurrentProject: (state) => {
@@ -110,8 +136,14 @@ export const projectSlice = createSlice({
             })
             .addCase(fetchProjectDetails.fulfilled, (state, action) => {
                 state.loading = false;
-                if (action.payload.currentProject) state.currentProject = action.payload.currentProject;
-                if (action.payload.allProjects) state.allProjects = action.payload.allProjects;
+                if (action.payload.currentProject) {
+                    state.currentProject = action.payload.currentProject;
+                    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(action.payload.currentProject));
+                }
+                if (action.payload.allProjects) {
+                    state.allProjects = action.payload.allProjects;
+                    localStorage.setItem(ALL_PROJECTS_STORAGE_KEY, JSON.stringify(action.payload.allProjects));
+                }
                 if (action.payload.usage) state.usage = action.payload.usage;
             })
             .addCase(fetchProjectDetails.rejected, (state, action) => {
@@ -125,7 +157,14 @@ export const projectSlice = createSlice({
             .addCase(createProject.fulfilled, (state, action) => {
                 state.loading = false;
                 state.currentProject = action.payload;
-                state.allProjects.push(action.payload); // Add to allProjects
+                // Add to allProjects if not already present
+                const exists = state.allProjects.find(p => p.projectId === action.payload.projectId);
+                if (!exists) {
+                    state.allProjects.push(action.payload);
+                }
+                // Persist to localStorage
+                localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(action.payload));
+                localStorage.setItem(ALL_PROJECTS_STORAGE_KEY, JSON.stringify(state.allProjects));
             })
             .addCase(createProject.rejected, (state, action) => {
                 state.loading = false;

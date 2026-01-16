@@ -16,29 +16,64 @@ import {
 import { useAppSelector, useAppDispatch } from '@/lib/store/hooks'
 import { fetchTrafficStats } from '@/lib/store/features/traffic/trafficSlice'
 import { fetchRecentDiffs as fetchDiffsAction } from '@/lib/store/features/diff/diffSlice'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import ProjectSwitcher from '@/components/ProjectSwitcher'
+import { useProjectPersistence } from '@/lib/hooks/useProjectPersistence'
 
 const Page = (): React.ReactNode => {
   const dispatch = useAppDispatch()
   const { stats, trends } = useAppSelector((state) => state.traffic)
   const { recentComparisons } = useAppSelector((state) => state.diff)
   const { currentProject } = useAppSelector((state) => state.project)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Fetch data on mount and poll every 30s
+  // Use project persistence hook
+  useProjectPersistence()
+
+  // Smart polling with Page Visibility API
   useEffect(() => {
-    if (currentProject.projectId) {
-      // Initial Fetch
+    if (!currentProject.projectId) return
+
+    const fetchData = () => {
       dispatch(fetchTrafficStats())
       dispatch(fetchDiffsAction())
+    }
 
-      // Polling
-      const interval = setInterval(() => {
-        dispatch(fetchTrafficStats())
-        dispatch(fetchDiffsAction())
-      }, 30000)
+    // Initial fetch
+    fetchData()
 
-      return () => clearInterval(interval)
+    // Setup interval
+    const startPolling = () => {
+      if (intervalRef.current) return // Already polling
+      intervalRef.current = setInterval(fetchData, 30000) // Poll every 30s
+    }
+
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    // Handle visibility change
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling() // Stop polling when tab is hidden
+      } else {
+        fetchData() // Fetch immediately when tab becomes visible
+        startPolling() // Resume polling
+      }
+    }
+
+    // Start polling
+    startPolling()
+
+    // Listen for visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [dispatch, currentProject.projectId])
 

@@ -1,14 +1,15 @@
 const express = require('express');
-const cors = require('cors');
-const Shadow = require('./shadow/shadow');
+const Shadow = require('shadow-deploy-client');
 
 const app = express();
+
+// TODO: Replace with environment variables (SHADOW_API_KEY and SHADOW_PROJECT_ID)
 const shadow = new Shadow({
-    apiKey: "sk_25uh2s8g0",
-    projectId: "proj_m5nza2j8u"
+    apiKey: "sk_126710d9-3e42-408c-8490-2bd4d9453c7d",
+    projectId: "proj_a197f22e-b9fe-416b-adb2-3e53d67eb643"
 });
+
 require('dotenv').config()
-app.use(cors());
 app.use(express.json());
 app.use(shadow.proxyHandler);
 

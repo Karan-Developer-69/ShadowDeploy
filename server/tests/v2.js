@@ -14,7 +14,7 @@ const shadow = express();
 // })
 // app.get('/traffic/logs', (req, res) => {
 //     res.json({ message: 'Hello, World!' });
-// })
+// }
 // app.get('/traffic/stats', (req, res) => {
 //     res.json({ message: 'Hello, World!' });
 // })

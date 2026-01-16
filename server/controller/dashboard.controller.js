@@ -124,8 +124,9 @@ module.exports.ingestData = async (req, res) => {
         }
 
         const { apiKey, projectId } = clientInfo;
+        const liveUrl = liveData?.liveUrl;
         const { validateProject } = require('./project.controller');
-        const project = await validateProject(apiKey, projectId);
+        const project = await validateProject(apiKey, projectId, liveUrl);
         if (!project) {
             return res.status(401).json({ message: "Invalid apiKey or projectId" });
         }

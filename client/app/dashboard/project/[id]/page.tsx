@@ -7,6 +7,7 @@ import { switchProject } from '@/lib/store/features/project/projectSlice'
 import { fetchTrafficStats, fetchTrafficLogs } from '@/lib/store/features/traffic/trafficSlice'
 import { fetchRecentDiffs } from '@/lib/store/features/diff/diffSlice'
 import { fetchEndpoints } from '@/lib/store/features/endpoint/endpointSlice'
+import { useProjectPersistence } from '@/lib/hooks/useProjectPersistence'
 
 // Import the main dashboard page content
 import DashboardPage from '../../page'
@@ -18,13 +19,16 @@ export default function ProjectPage() {
     const { allProjects, currentProject } = useAppSelector((state) => state.project)
     const projectId = params.id as string
 
+    // Use project persistence hook
+    useProjectPersistence()
+
     // When projectId from URL changes, update Redux state
     useEffect(() => {
         if (projectId && allProjects.length > 0) {
             const project = allProjects.find(p => p.projectId === projectId)
 
             if (project) {
-                // Switch to this project in Redux
+                // Optimistically switch to this project in Redux
                 if (currentProject.projectId !== projectId) {
                     dispatch(switchProject(projectId))
                 }
@@ -39,9 +43,10 @@ export default function ProjectPage() {
         }
     }, [projectId, allProjects, currentProject.projectId, dispatch, router])
 
-    // Fetch data when project changes
+    // Fetch data when project changes (with debounce)
     useEffect(() => {
         if (currentProject.projectId && currentProject.liveUrl && currentProject.shadowUrl) {
+            // Only fetch if we have complete project details
             dispatch(fetchTrafficStats())
             dispatch(fetchTrafficLogs())
             dispatch(fetchRecentDiffs())

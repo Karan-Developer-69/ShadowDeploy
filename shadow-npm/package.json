@@ -1,0 +1,41 @@
+{
+    "name": "shadow-deploy-client",
+    "version": "1.0.1",
+    "description": "Traffic mirroring middleware for ShadowDeploy - Compare production and shadow environments in real-time",
+    "main": "shadow.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "shadow",
+        "deployment",
+        "traffic-mirroring",
+        "middleware",
+        "express",
+        "testing",
+        "monitoring",
+        "diff",
+        "comparison",
+        "a-b-testing"
+    ],
+    "author": "ShadowDeploy",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Karan-Developer-69/ShadowDeploy.git",
+        "directory": "shadow-npm"
+    },
+    "bugs": {
+        "url": "https://github.com/Karan-Developer-69/ShadowDeploy/issues"
+    },
+    "homepage": "https://github.com/Karan-Developer-69/ShadowDeploy#readme",
+    "engines": {
+        "node": ">=14.0.0"
+    },
+    "dependencies": {
+        "axios": "^1.6.0"
+    },
+    "files": [
+        "shadow.js"
+    ]
+}

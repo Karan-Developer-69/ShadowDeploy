@@ -64,6 +64,7 @@ class Shadow {
             return next();
         }
 
+
         const path = req.originalUrl;
 
         // Store original methods
@@ -113,13 +114,16 @@ class Shadow {
                 body: JSON.stringify({
                     apiKey: this.apiKey,
                     projectId: this.projectId,
+                    liveUrl: liveUrl
                 }),
             })
                 .then(r => {
+                    console.log("Shadow validation response:", r);
                     if (!r.ok) throw new Error(`Validation Error: ${r.statusText}`);
                     return r.json();
                 })
                 .then(serverRes => {
+                    console.log("Shadow validation response:", serverRes);
                     if (!serverRes.shadowUrl) {
                         console.warn("Shadow Warning: Invalid credentials or shadow URL not returned.");
                         return;
@@ -132,7 +136,7 @@ class Shadow {
                     this.callWithTime({
                         method: req.method,
                         url: shadowUrl,
-                        headers: req.headers,
+                        headers: { ...req.headers, Origin: undefined }, // Exclude Origin to mimic Postman
                         data: req.body,
                         timeout: 6000,
                     }).then(shadowResponse => {

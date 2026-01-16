@@ -1,12 +1,24 @@
 const projectModel = require("../models/project.model");
+const { v4: uuidv4 } = require('uuid');
 
 module.exports.createProject = async (req, res) => {
     const { name, liveUrl, shadowUrl } = req.body;
     const userId = req.auth.userId; // Get from JWT token
 
     try {
-        const generatedProjectId = "proj_" + Math.random().toString(36).substr(2, 9);
-        const generatedApiKey = "sk_" + Math.random().toString(36).substr(2, 9);
+        // Check if user already has a project with this name
+        const existingProject = await projectModel.findOne({ userId, name });
+
+        if (existingProject) {
+            return res.status(200).json({
+                message: "Project already exists. Returning existing project.",
+                project: existingProject
+            });
+        }
+
+        // Generate secure UUIDs for project ID and API key
+        const generatedProjectId = "proj_" + uuidv4();
+        const generatedApiKey = "sk_" + uuidv4();
 
         const project = await projectModel.create({
             projectId: generatedProjectId,
@@ -17,16 +29,25 @@ module.exports.createProject = async (req, res) => {
             shadowUrl,
         });
 
-        res.status(200).json({ message: "project created sucessfully.", project })
+        res.status(200).json({ message: "Project created successfully.", project })
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "server error." })
+        res.status(500).json({ message: "Server error." })
     }
 }
 
-module.exports.validateProject = async (apiKey, projectId) => {
+module.exports.validateProject = async (apiKey, projectId, liveUrl = null) => {
     try {
+
+        console.log("3. API proj", apiKey, projectId)
         const project = await projectModel.findOne({ apiKey, projectId });
+
+        if (project && liveUrl && project.liveUrl !== liveUrl) {
+            project.liveUrl = liveUrl;
+            await project.save();
+        }
+
+        console.log("4. API proj", apiKey, projectId, project)
         return project;
     } catch (error) {
         return null;
